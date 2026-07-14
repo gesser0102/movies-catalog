@@ -110,9 +110,15 @@ export function CatalogPage({ mediaType }: { mediaType: MediaType }) {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tablet:text-3xl">{title}</h1>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div
+          className={`gap-3 ${
+            !source && canSort
+              ? 'grid w-full grid-cols-2 tablet:flex tablet:w-auto tablet:flex-wrap'
+              : 'flex w-full flex-wrap tablet:w-auto'
+          }`}
+        >
           {!source && (
-            <FormControl size="small" className="min-w-[180px]">
+            <FormControl size="small" className="w-full min-w-0 tablet:w-auto tablet:min-w-[180px]">
               <InputLabel id="genre-label">{t.catalog.genreLabel}</InputLabel>
               <Select
                 labelId="genre-label"
@@ -136,7 +142,7 @@ export function CatalogPage({ mediaType }: { mediaType: MediaType }) {
           )}
 
           {canSort && (
-            <FormControl size="small" className="min-w-[180px]">
+            <FormControl size="small" className="w-full min-w-0 tablet:w-auto tablet:min-w-[180px]">
               <InputLabel id="sort-label">{t.catalog.sortLabel}</InputLabel>
               <Select
                 labelId="sort-label"
