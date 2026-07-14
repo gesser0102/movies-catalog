@@ -1,0 +1,48 @@
+/* Tailwind. Lembrando que o preflight (reset) está desligado no config —
+   quem faz o reset é o <CssBaseline /> do MUI. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reset de âncora.
+   Com o preflight do Tailwind desligado, e como o CssBaseline do MUI NÃO
+   normaliza links, todo <a> (incluindo os <Link> do React Router) herdava o
+   azul-sublinhado padrão do navegador. Aqui zeramos isso: o link herda a cor do
+   texto e não sublinha. Usamos seletor de elemento (especificidade baixa) de
+   propósito, pra que qualquer utility do Tailwind — text-brand, hover:*, etc. —
+   continue vencendo normalmente. */
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Reset de button.
+   Mesma história do reset de âncora: sem o preflight, os <button> nativos ficam
+   com o visual padrão do navegador (fundo cinza "buttonface" + borda). Isso
+   aparecia por baixo das nossas barras de navegação do slider, que terminam em
+   transparente. Zeramos o estilo nativo aqui; os componentes do MUI não são
+   afetados porque estilizam via classe (especificidade maior que o seletor de
+   elemento). */
+button {
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Fonte da UI. Uso a stack do sistema como fallback pra não travar o primeiro
+   render esperando webfont — a tipografia do MUI aponta pra "Inter" quando ela
+   estiver disponível. */
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Rolagem suave em âncoras internas. */
+html {
+  scroll-behavior: smooth;
+}

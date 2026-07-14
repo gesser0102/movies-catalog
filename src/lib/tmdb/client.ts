@@ -1,0 +1,62 @@
+import axios, { AxiosError } from 'axios';
+import { env } from '@/config/env';
+
+/**
+ * Erro de domínio da nossa camada de API.
+ *
+ * Traduzimos os erros crus do axios (que carregam muito detalhe de rede) para
+ * um tipo próprio e previsível. A UI só precisa saber: deu erro, qual o status
+ * e uma mensagem apresentável. O React Query recebe esse erro e os componentes
+ * de feedback sabem lidar com ele.
+ */
+export class TmdbApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status?: number,
+    public readonly isNetworkError = false,
+  ) {
+    super(message);
+    this.name = 'TmdbApiError';
+  }
+}
+
+/**
+ * Criacao da base url das requestes com bearer
+ * passado no header da request
+ */
+export const tmdbClient = axios.create({
+  baseURL: env.tmdb.apiBaseUrl,
+  headers: {
+    Authorization: `Bearer ${env.tmdb.accessToken}`,
+    Accept: 'application/json',
+  },
+  timeout: 12_000,
+});
+
+
+ //Interceptor de resposta: converte qualquer falha num TmdbApiError.
+tmdbClient.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<{ status_message?: string }>) => {
+    if (!error.response) {
+      return Promise.reject(
+        new TmdbApiError(
+          'Não foi possível conectar à TMDB. Verifique sua conexão.',
+          undefined,
+          true,
+        ),
+      );
+    }
+
+    const status = error.response.status;
+    const apiMessage = error.response.data?.status_message;
+    const fallback =
+      status === 401
+        ? 'Credencial da TMDB inválida. Confira o token no .env.local.'
+        : status === 404
+          ? 'Conteúdo não encontrado.'
+          : 'Algo deu errado ao falar com a TMDB.';
+
+    return Promise.reject(new TmdbApiError(apiMessage ?? fallback, status));
+  },
+);
