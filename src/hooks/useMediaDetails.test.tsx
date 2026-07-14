@@ -2,7 +2,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { renderHook, waitFor } from '@testing-library/react';
 import { type ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { useMediaDetails, usePrefetchMediaDetails } from './useMediaDetails';
+import {
+  useMediaDetails,
+  usePrefetchMediaDetails,
+  useWarmAlternateLanguageMediaDetails,
+} from './useMediaDetails';
 import { I18nProvider } from '@/contexts/i18n/I18nProvider';
 import type { TmdbMovieDetails, TmdbTvDetails } from '@/types/tmdb';
 
@@ -109,6 +113,21 @@ describe('useMediaDetails', () => {
     const { result } = renderHook(() => usePrefetchMediaDetails(), { wrapper });
 
     result.current('movie', 0);
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+    expect(getMovieDetailsMock).not.toHaveBeenCalled();
+  });
+
+  it('warms the alternate language details cache', async () => {
+    renderHook(() => useWarmAlternateLanguageMediaDetails('movie', 1), { wrapper });
+
+    await waitFor(() => expect(getMovieDetailsMock).toHaveBeenCalledWith(1, 'pt-BR'));
+  });
+
+  it('does not warm alternate language details when disabled or id is invalid', async () => {
+    renderHook(() => useWarmAlternateLanguageMediaDetails('movie', 0), { wrapper });
+    renderHook(() => useWarmAlternateLanguageMediaDetails('movie', 1, false), { wrapper });
+
     await new Promise((resolve) => window.setTimeout(resolve, 0));
 
     expect(getMovieDetailsMock).not.toHaveBeenCalled();
