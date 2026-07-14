@@ -22,13 +22,20 @@ interface HeroProps {
 const AUTOPLAY_MS = 7_000;
 const FEATURED_LIMIT = 6;
 
+function pickRandomFeatured(items: MediaItem[]) {
+  return [...items]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, FEATURED_LIMIT);
+}
+
 /**
  * Carrossel de destaque no topo da Home.
  */
 export function Hero({ mediaType, items, isLoading }: HeroProps) {
   const { t } = useI18n();
   const [activeIndex, setActiveIndex] = useState(0);
-  const featured = useMemo(() => items.slice(0, FEATURED_LIMIT), [items]);
+  const itemSignature = items.map((mediaItem) => mediaItem.id).join('|');
+  const featured = useMemo(() => pickRandomFeatured(items), [itemSignature, items]);
   const item = featured[activeIndex] ?? featured[0];
   const prefetchDetails = usePrefetchMediaDetails();
   const { data: details } = useMediaDetails(mediaType, item?.id ?? 0, Boolean(item));
