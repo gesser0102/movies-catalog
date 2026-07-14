@@ -52,6 +52,7 @@ export function MediaSlider({
             className="shrink-0 rounded-full border border-current/15 px-3 py-1 text-xs font-semibold opacity-75 transition hover:border-brand hover:text-brand hover:opacity-100"
           >
             {seeAllLabel}
+            <span className="sr-only">: {title}</span>
           </Link>
         )}
       </div>

@@ -47,7 +47,7 @@ describe('MediaSlider', () => {
     );
 
     expect(screen.getByRole('heading', { name: 'Em alta' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Ver mais' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Ver mais: Em alta' })).toHaveAttribute(
       'href',
       '/movies/catalog',
     );
