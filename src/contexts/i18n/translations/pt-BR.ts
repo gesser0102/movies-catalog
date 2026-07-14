@@ -43,6 +43,8 @@ export const ptBR: Translation = {
   catalog: {
     moviesTitle: 'Catálogo de filmes',
     seriesTitle: 'Catálogo de séries',
+    genreLabel: 'Genero',
+    allGenres: 'Todos os generos',
     sortLabel: 'Ordenar por',
     sortPopularity: 'Popularidade',
     sortRating: 'Avaliação',

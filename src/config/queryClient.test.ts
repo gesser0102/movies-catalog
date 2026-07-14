@@ -25,12 +25,18 @@ describe('query client configuration', () => {
       42,
       'en-US',
     ]);
+    expect(queryKeys.genres('movie', 'pt-BR')).toEqual([
+      'genres',
+      'movie',
+      'pt-BR',
+    ]);
   });
 
   it('uses longer stale times for catalog and detail data', () => {
     expect(queryStaleTime.trending).toBe(10 * 60 * 1000);
     expect(queryStaleTime.catalog).toBe(45 * 60 * 1000);
     expect(queryStaleTime.details).toBe(12 * 60 * 60 * 1000);
+    expect(queryStaleTime.genres).toBe(30 * 24 * 60 * 60 * 1000);
   });
 
   it('does not retry permanent TMDB errors but retries transient failures', () => {

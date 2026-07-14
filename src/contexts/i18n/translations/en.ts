@@ -41,6 +41,8 @@ export const en = {
   catalog: {
     moviesTitle: 'Movies catalog',
     seriesTitle: 'Series catalog',
+    genreLabel: 'Genre',
+    allGenres: 'All genres',
     sortLabel: 'Sort by',
     sortPopularity: 'Popularity',
     sortRating: 'Rating',

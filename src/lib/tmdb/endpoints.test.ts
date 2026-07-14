@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   discoverMedia,
   getCredits,
+  getGenres,
   getMediaCollection,
   getMovieDetails,
   getPopular,
@@ -113,6 +114,27 @@ describe('TMDB endpoints', () => {
       title: 'Second EN',
       overview: 'Overview 2 EN',
     });
+  });
+
+  it('fetches the official localized genre list for the selected media type', async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        genres: [
+          { id: 28, name: 'Ação' },
+          { id: 35, name: 'Comédia' },
+        ],
+      },
+    });
+
+    const result = await getGenres('movie', 'pt-BR');
+
+    expect(getMock).toHaveBeenCalledWith('/genre/movie/list', {
+      params: { language: 'pt-BR' },
+    });
+    expect(result).toEqual([
+      { id: 28, name: 'Ação' },
+      { id: 35, name: 'Comédia' },
+    ]);
   });
 
   it('always applies Brazilian region params to movie collection requests', async () => {

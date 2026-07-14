@@ -9,9 +9,8 @@ import { MediaCardSkeleton } from '@/components/media/MediaCardSkeleton';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useI18n } from '@/contexts/i18n/useI18n';
-import { useCatalogListing } from '../api/queries';
+import { useCatalogListing, useGenres } from '../api/queries';
 import {
-  HOME_GENRES,
   type CatalogCollection,
   type SortOption,
 } from '@/lib/tmdb/endpoints';
@@ -49,13 +48,16 @@ export function CatalogPage({ mediaType }: { mediaType: MediaType }) {
   const defaultSort: SortOption = source === 'top_rated' ? 'rating' : 'popularity';
   const sort: SortOption = VALID_SORTS.includes(sortParam!) ? sortParam! : defaultSort;
   const genreParam = Number(searchParams.get('genre'));
-  const genre = HOME_GENRES[mediaType].find((item) => item.id === genreParam);
+  const selectedGenreId =
+    Number.isFinite(genreParam) && genreParam > 0 ? genreParam : undefined;
+  const genres = useGenres(mediaType);
+  const genre = genres.data?.find((item) => item.id === selectedGenreId);
 
   const { data, isLoading, isError, error, refetch, isPlaceholderData } = useCatalogListing({
     mediaType,
     sort,
     page,
-    genreId: source ? undefined : genre?.id,
+    genreId: source ? undefined : selectedGenreId,
     collection: source,
   });
 
@@ -73,15 +75,28 @@ export function CatalogPage({ mediaType }: { mediaType: MediaType }) {
   const title = source
     ? sourceTitles[source]
     : genre
-      ? t.home.genres[genre.key]
+      ? genre.name
       : baseTitle;
   const canSort = source !== 'trending';
 
-  const updateParams = (next: { sort?: SortOption; page?: number }) => {
+  const updateParams = (next: {
+    sort?: SortOption;
+    page?: number;
+    genreId?: number | null;
+  }) => {
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev);
       if (next.sort) {
         params.set('sort', next.sort);
+        params.set('page', '1');
+      }
+      if ('genreId' in next) {
+        params.delete('source');
+        if (next.genreId) {
+          params.set('genre', String(next.genreId));
+        } else {
+          params.delete('genre');
+        }
         params.set('page', '1');
       }
       if (next.page) params.set('page', String(next.page));
@@ -95,21 +110,47 @@ export function CatalogPage({ mediaType }: { mediaType: MediaType }) {
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-bold tablet:text-3xl">{title}</h1>
 
-        {canSort && (
-          <FormControl size="small" className="min-w-[180px]">
-            <InputLabel id="sort-label">{t.catalog.sortLabel}</InputLabel>
-            <Select
-              labelId="sort-label"
-              label={t.catalog.sortLabel}
-              value={sort}
-              onChange={(e) => updateParams({ sort: e.target.value as SortOption })}
-            >
-              <MenuItem value="popularity">{t.catalog.sortPopularity}</MenuItem>
-              <MenuItem value="rating">{t.catalog.sortRating}</MenuItem>
-              <MenuItem value="alphabetical">{t.catalog.sortAlphabetical}</MenuItem>
-            </Select>
-          </FormControl>
-        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {!source && (
+            <FormControl size="small" className="min-w-[180px]">
+              <InputLabel id="genre-label">{t.catalog.genreLabel}</InputLabel>
+              <Select
+                labelId="genre-label"
+                label={t.catalog.genreLabel}
+                value={selectedGenreId ?? ''}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  updateParams({
+                    genreId: value === '' ? null : Number(value),
+                  });
+                }}
+              >
+                <MenuItem value="">{t.catalog.allGenres}</MenuItem>
+                {(genres.data ?? []).map((item) => (
+                  <MenuItem key={item.id} value={item.id}>
+                    {item.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+
+          {canSort && (
+            <FormControl size="small" className="min-w-[180px]">
+              <InputLabel id="sort-label">{t.catalog.sortLabel}</InputLabel>
+              <Select
+                labelId="sort-label"
+                label={t.catalog.sortLabel}
+                value={sort}
+                onChange={(e) => updateParams({ sort: e.target.value as SortOption })}
+              >
+                <MenuItem value="popularity">{t.catalog.sortPopularity}</MenuItem>
+                <MenuItem value="rating">{t.catalog.sortRating}</MenuItem>
+                <MenuItem value="alphabetical">{t.catalog.sortAlphabetical}</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+        </div>
       </div>
 
       {isError ? (

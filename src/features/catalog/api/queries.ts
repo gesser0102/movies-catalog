@@ -4,6 +4,7 @@ import { queryKeys, queryStaleTime } from '@/config/queryClient';
 import { useI18n } from '@/contexts/i18n/useI18n';
 import {
   discoverMedia,
+  getGenres,
   getMediaCollection,
   getPopular,
   getTopRated,
@@ -64,6 +65,12 @@ export function useWarmAlternateLanguageHomeQueries(mediaType: MediaType) {
       staleTime: queryStaleTime.catalog,
     });
 
+    void queryClient.prefetchQuery({
+      queryKey: queryKeys.genres(mediaType, alternateLanguage),
+      queryFn: () => getGenres(mediaType, alternateLanguage),
+      staleTime: queryStaleTime.genres,
+    });
+
     for (const collection of HOME_COLLECTIONS[mediaType]) {
       void queryClient.prefetchQuery({
         queryKey: queryKeys.collection(mediaType, alternateLanguage, collection, 1),
@@ -99,6 +106,15 @@ export function useWarmAlternateLanguageHomeQueries(mediaType: MediaType) {
       });
     }
   }, [language, mediaType, queryClient]);
+}
+
+export function useGenres(mediaType: MediaType) {
+  const { language } = useI18n();
+  return useQuery({
+    queryKey: queryKeys.genres(mediaType, language),
+    queryFn: () => getGenres(mediaType, language),
+    staleTime: queryStaleTime.genres,
+  });
 }
 
 export function useTrending(mediaType: MediaType, timeWindow: TrendingWindow = 'week') {

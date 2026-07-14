@@ -22,7 +22,7 @@ interface HoverPreviewCardProps {
 }
 
 /**
- * Posiciona o preview centralizado sobre o card de origem, sem deixar na viewport
+ * Posiciona o preview centralizado sobre o card de origem, sem deixar vazar na viewport
  */
 function computePosition(anchor: DOMRect, height: number) {
   const width = PREVIEW_WIDTH;

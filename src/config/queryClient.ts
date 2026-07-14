@@ -7,6 +7,7 @@ export const queryStaleTime = {
   details: 12 * 60 * 60 * 1000,
   credits: 7 * 24 * 60 * 60 * 1000,
   similar: 12 * 60 * 60 * 1000,
+  genres: 30 * 24 * 60 * 60 * 1000,
 } as const;
 
 /**
@@ -69,4 +70,6 @@ export const queryKeys = {
     ['credits', mediaType, id] as const,
   similar: (mediaType: string, id: number, language: string) =>
     ['similar', mediaType, id, language] as const,
+  genres: (mediaType: string, language: string) =>
+    ['genres', mediaType, language] as const,
 } as const;

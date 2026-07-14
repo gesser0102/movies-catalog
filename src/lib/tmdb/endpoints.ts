@@ -1,6 +1,8 @@
 import { tmdbClient } from './client';
 import type {
   Credits,
+  Genre,
+  GenreListResponse,
   MediaItem,
   MediaType,
   MovieReleaseDatesResponse,
@@ -81,6 +83,17 @@ export const HOME_GENRES: Record<MediaType, GenreOption[]> = {
     { id: 80, key: 'crime' },
   ],
 };
+
+export async function getGenres(
+  mediaType: MediaType,
+  language: TmdbLanguage,
+): Promise<Genre[]> {
+  const genreType = mediaType === 'movie' ? 'movie' : 'tv';
+  const { data } = await tmdbClient.get<GenreListResponse>(`/genre/${genreType}/list`, {
+    params: { language },
+  });
+  return data.genres;
+}
 
 const SORT_BY_MAP: Record<SortOption, string> = {
   popularity: 'popularity.desc',

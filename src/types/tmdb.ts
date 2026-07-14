@@ -47,6 +47,10 @@ export interface Genre {
   name: string;
 }
 
+export interface GenreListResponse {
+  genres: Genre[];
+}
+
 export interface CastMember {
   id: number;
   name: string;
