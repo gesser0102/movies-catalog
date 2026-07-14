@@ -1,33 +1,52 @@
+import { lazy, Suspense, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RootLayout } from '@/components/layout/RootLayout';
-import { HomePage } from '@/features/catalog/pages/HomePage';
-import { CatalogPage } from '@/features/catalog/pages/CatalogPage';
-import { DetailsPage } from '@/features/details/pages/DetailsPage';
-import { NotFoundPage } from '@/components/feedback/NotFoundPage';
+import { LoadingState } from '@/components/feedback/LoadingState';
 
-/**
- * Definição de rotas.
- */
+const HomePage = lazy(() =>
+  import('@/features/catalog/pages/HomePage').then((module) => ({
+    default: module.HomePage,
+  })),
+);
+
+const CatalogPage = lazy(() =>
+  import('@/features/catalog/pages/CatalogPage').then((module) => ({
+    default: module.CatalogPage,
+  })),
+);
+
+const DetailsPage = lazy(() =>
+  import('@/features/details/pages/DetailsPage').then((module) => ({
+    default: module.DetailsPage,
+  })),
+);
+
+const NotFoundPage = lazy(() =>
+  import('@/components/feedback/NotFoundPage').then((module) => ({
+    default: module.NotFoundPage,
+  })),
+);
+
+function routeElement(element: ReactNode) {
+  return <Suspense fallback={<LoadingState />}>{element}</Suspense>;
+}
+
 export const router = createBrowserRouter([
   {
     path: '/',
     element: <RootLayout />,
     children: [
-      // Entrada da app cai direto no catálogo de filmes.
       { index: true, element: <Navigate to="/movies" replace /> },
 
-      // ---- Filmes ----
-      { path: 'movies', element: <HomePage mediaType="movie" /> },
-      { path: 'movies/catalog', element: <CatalogPage mediaType="movie" /> },
-      { path: 'movies/:id', element: <DetailsPage mediaType="movie" /> },
+      { path: 'movies', element: routeElement(<HomePage mediaType="movie" />) },
+      { path: 'movies/catalog', element: routeElement(<CatalogPage mediaType="movie" />) },
+      { path: 'movies/:id', element: routeElement(<DetailsPage mediaType="movie" />) },
 
-      // ---- Séries ----
-      { path: 'series', element: <HomePage mediaType="tv" /> },
-      { path: 'series/catalog', element: <CatalogPage mediaType="tv" /> },
-      { path: 'series/:id', element: <DetailsPage mediaType="tv" /> },
+      { path: 'series', element: routeElement(<HomePage mediaType="tv" />) },
+      { path: 'series/catalog', element: routeElement(<CatalogPage mediaType="tv" />) },
+      { path: 'series/:id', element: routeElement(<DetailsPage mediaType="tv" />) },
 
-      // Qualquer rota desconhecida cai no 404.
-      { path: '*', element: <NotFoundPage /> },
+      { path: '*', element: routeElement(<NotFoundPage />) },
     ],
   },
 ]);

@@ -57,6 +57,7 @@ function setHoverSupport(matches: boolean) {
 describe('MediaCard', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    vi.clearAllMocks();
     setHoverSupport(true);
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(
       new DOMRect(20, 30, 180, 270),
@@ -103,7 +104,7 @@ describe('MediaCard', () => {
     expect(screen.getByTestId('hover-preview')).toHaveTextContent('Preview: Preview Movie');
   });
 
-  it('does not open hover preview on touch-only devices', () => {
+  it('prefetches details but does not open hover preview on touch-only devices', () => {
     setHoverSupport(false);
     renderCard();
 
@@ -112,7 +113,7 @@ describe('MediaCard', () => {
       vi.advanceTimersByTime(380);
     });
 
-    expect(prefetchMock).not.toHaveBeenCalled();
+    expect(prefetchMock).toHaveBeenCalledWith('movie', 77);
     expect(screen.queryByTestId('hover-preview')).not.toBeInTheDocument();
   });
 

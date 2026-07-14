@@ -7,13 +7,13 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import HomeIcon from '@mui/icons-material/Home';
 import OndemandVideoIcon from '@mui/icons-material/OndemandVideo';
 import ScheduleIcon from '@mui/icons-material/Schedule';
+import { DetailsPageSkeleton } from '../components/DetailsPageSkeleton';
 import { CastSlider } from '../components/CastSlider';
 import { FullCreditsModal } from '../components/FullCreditsModal';
 import { TrailerModal } from '../components/TrailerModal';
 import { ContentRatingBadge } from '@/components/media/ContentRatingBadge';
 import { MediaSlider } from '@/components/media/MediaSlider';
 import { RatingBadge } from '@/components/media/RatingBadge';
-import { LoadingState } from '@/components/feedback/LoadingState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import {
   useCredits,
@@ -76,7 +76,7 @@ export function DetailsPage({ mediaType }: { mediaType: MediaType }) {
     }
   }, [prefetchDetails, similar.data]);
 
-  if (details.isLoading) return <LoadingState />;
+  if (details.isLoading) return <DetailsPageSkeleton />;
   if (details.isError || !details.data) {
     return (
       <ErrorState message={details.error?.message} onRetry={() => details.refetch()} />
@@ -117,6 +117,7 @@ export function DetailsPage({ mediaType }: { mediaType: MediaType }) {
             src={backdrop}
             alt=""
             aria-hidden
+            fetchPriority="high"
             className="absolute inset-0 h-full w-full object-cover object-top opacity-30"
           />
         )}
@@ -153,6 +154,7 @@ export function DetailsPage({ mediaType }: { mediaType: MediaType }) {
                 <img
                   src={poster}
                   alt={title}
+                  fetchPriority="high"
                   className="w-full rounded-xl shadow-2xl ring-1 ring-white/10"
                 />
               ) : (

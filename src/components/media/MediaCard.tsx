@@ -4,6 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import BrokenImageIcon from '@mui/icons-material/BrokenImage';
 import { RatingBadge } from './RatingBadge';
 import { HoverPreviewCard } from './HoverPreviewCard';
+import { preloadDetailsRoute } from '@/app/router/preloadRoutes';
 import { backdropUrl, posterUrl } from '@/lib/tmdb/images';
 import { usePrefetchMediaDetails } from '@/hooks/useMediaDetails';
 import type { MediaItem } from '@/types/tmdb';
@@ -50,12 +51,10 @@ function MediaCardComponent({ item, variant = 'grid' }: MediaCardProps) {
     window.clearTimeout(closeTimer.current);
   };
 
-  const openPreview = () => {
-    if (!canHover()) return;
-    window.clearTimeout(closeTimer.current);
-
-    // Pre fetch dos detalhes pra evitar reflow
+  const warmCardResources = () => {
+    preloadDetailsRoute();
     prefetchDetails(item.mediaType, item.id);
+
     if (!preloadedImage.current) {
       const src = backdropUrl(item.backdropPath, 'w780');
       if (src) {
@@ -64,6 +63,12 @@ function MediaCardComponent({ item, variant = 'grid' }: MediaCardProps) {
       }
       preloadedImage.current = true;
     }
+  };
+
+  const openPreview = () => {
+    warmCardResources();
+    if (!canHover()) return;
+    window.clearTimeout(closeTimer.current);
 
     openTimer.current = window.setTimeout(() => {
       const rect = tileRef.current?.getBoundingClientRect();
@@ -96,6 +101,8 @@ function MediaCardComponent({ item, variant = 'grid' }: MediaCardProps) {
         aria-label={item.title}
         onMouseEnter={openPreview}
         onMouseLeave={closePreview}
+        onFocus={warmCardResources}
+        onTouchStart={warmCardResources}
       >
         <div className="relative aspect-[2/3] overflow-hidden bg-surface-800">
           {poster ? (

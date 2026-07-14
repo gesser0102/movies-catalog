@@ -5,6 +5,7 @@ import IconButton from '@mui/material/IconButton';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { preloadCatalogRoute, preloadDetailsRoute } from '@/app/router/preloadRoutes';
 import { ContentRatingBadge } from '@/components/media/ContentRatingBadge';
 import { RatingBadge } from '@/components/media/RatingBadge';
 import { useMediaDetails, usePrefetchMediaDetails } from '@/hooks/useMediaDetails';
@@ -71,6 +72,11 @@ export function Hero({ mediaType, items, isLoading }: HeroProps) {
     setActiveIndex((current) => (current + 1) % featured.length);
   };
 
+  const warmDetails = () => {
+    preloadDetailsRoute();
+    prefetchDetails(item.mediaType, item.id);
+  };
+
   return (
     <section className="relative h-[64vh] min-h-[500px] w-full overflow-hidden tablet:min-h-[540px] desktop:min-h-[560px]">
       {backdrop && (
@@ -78,6 +84,7 @@ export function Hero({ mediaType, items, isLoading }: HeroProps) {
           key={item.id}
           src={backdrop}
           alt={item.title}
+          fetchPriority="high"
           className="absolute inset-0 h-full w-full animate-fade-in object-cover object-top"
         />
       )}
@@ -112,6 +119,8 @@ export function Hero({ mediaType, items, isLoading }: HeroProps) {
         <Link
           to={to}
           className="mt-3 flex min-h-[86px] w-fit max-w-2xl items-end hover:text-brand tablet:min-h-[104px] desktop:min-h-[116px]"
+          onMouseEnter={warmDetails}
+          onFocus={warmDetails}
         >
           <h1 className="line-clamp-2 text-3xl font-extrabold leading-[1.05] drop-shadow tablet:text-4xl desktop:text-5xl">
             {item.title}
@@ -146,6 +155,8 @@ export function Hero({ mediaType, items, isLoading }: HeroProps) {
             variant="contained"
             size="large"
             startIcon={<InfoOutlinedIcon />}
+            onMouseEnter={warmDetails}
+            onFocus={warmDetails}
           >
             {t.details.viewDetails}
           </Button>
@@ -155,6 +166,8 @@ export function Hero({ mediaType, items, isLoading }: HeroProps) {
             variant="outlined"
             size="large"
             className="!border-white/40 !text-white hover:!border-white"
+            onMouseEnter={preloadCatalogRoute}
+            onFocus={preloadCatalogRoute}
           >
             {t.common.seeAll}
           </Button>
