@@ -95,7 +95,7 @@ describe('useMediaDetails', () => {
     expect(getTvDetailsMock).not.toHaveBeenCalled();
   });
 
-  it('uses smart cached details as placeholder data when the target language is warm', () => {
+  it('serves fresh smart cached details without refetching when the target language is warm', async () => {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -122,7 +122,50 @@ describe('useMediaDetails', () => {
       poster_path: movieDetails.poster_path,
       genres: [{ id: 1, name: 'Action' }],
     });
-    expect(result.current.isPlaceholderData).toBe(true);
+    expect(result.current.isSuccess).toBe(true);
+
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+    expect(getMovieDetailsMock).not.toHaveBeenCalled();
+  });
+
+  it('refetches details when the smart cache is older than the stale time', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const thirteenHoursAgo = Date.now() - 13 * 60 * 60 * 1000;
+    vi.useFakeTimers({ now: thirteenHoursAgo, toFake: ['Date'] });
+    writeMediaDetailsSmartCache(client, 'movie', 1, 'en-US', {
+      ...movieDetails,
+      title: 'Stale cached movie',
+    });
+    vi.useRealTimers();
+
+    const { result } = renderHook(() => useMediaDetails('movie', 1), {
+      wrapper: wrapperWithClient(client),
+    });
+
+    expect(result.current.data).toMatchObject({ title: 'Stale cached movie' });
+
+    await waitFor(() => expect(getMovieDetailsMock).toHaveBeenCalledWith(1, 'en-US'));
+    await waitFor(() =>
+      expect(result.current.data).toMatchObject({ title: movieDetails.title }),
+    );
+  });
+
+  it('does not refetch on prefetch when the smart cache is fresh', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    writeMediaDetailsSmartCache(client, 'movie', 1, 'en-US', movieDetails);
+
+    const { result } = renderHook(() => usePrefetchMediaDetails(), {
+      wrapper: wrapperWithClient(client),
+    });
+
+    result.current('movie', 1);
+    await new Promise((resolve) => window.setTimeout(resolve, 0));
+
+    expect(getMovieDetailsMock).not.toHaveBeenCalled();
   });
 
   it('fetches TV details through the TV endpoint', async () => {

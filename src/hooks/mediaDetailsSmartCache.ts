@@ -205,3 +205,20 @@ export function readMediaDetailsSmartCache(
   if (!base || !text) return undefined;
   return mergeDetails(base, text);
 }
+
+export function readMediaDetailsSmartCacheUpdatedAt(
+  queryClient: QueryClient,
+  mediaType: MediaType,
+  id: number,
+  language: Language,
+): number | undefined {
+  const baseUpdatedAt = queryClient.getQueryState(
+    queryKeys.detailsBase(mediaType, id),
+  )?.dataUpdatedAt;
+  const textUpdatedAt = queryClient.getQueryState(
+    queryKeys.detailsText(mediaType, id, language),
+  )?.dataUpdatedAt;
+
+  if (!baseUpdatedAt || !textUpdatedAt) return undefined;
+  return Math.min(baseUpdatedAt, textUpdatedAt);
+}

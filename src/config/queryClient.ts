@@ -18,6 +18,7 @@ export const queryStaleTime = {
 
 const queryGcTime = {
   default: 30 * 60 * 1000,
+  details: queryStaleTime.details,
   detailsSmartCache: queryStaleTime.details,
   credits: queryStaleTime.credits,
   genres: queryStaleTime.genres,
@@ -106,6 +107,11 @@ queryClient.setQueryDefaults(['genres'], {
 queryClient.setQueryDefaults(['credits'], {
   staleTime: queryStaleTime.credits,
   gcTime: queryGcTime.credits,
+});
+
+queryClient.setQueryDefaults(['details'], {
+  staleTime: queryStaleTime.details,
+  gcTime: queryGcTime.details,
 });
 
 queryClient.setQueryDefaults(['detailsBase'], {

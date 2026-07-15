@@ -5,6 +5,7 @@ import { useI18n } from '@/contexts/i18n/useI18n';
 import { getMovieDetails, getTvDetails } from '@/lib/tmdb/endpoints';
 import {
   readMediaDetailsSmartCache,
+  readMediaDetailsSmartCacheUpdatedAt,
   writeMediaDetailsSmartCache,
 } from './mediaDetailsSmartCache';
 import type { Language } from '@/contexts/i18n/translations';
@@ -36,6 +37,44 @@ function getAlternateLanguage(language: Language): Language {
   return language === 'pt-BR' ? 'en-US' : 'pt-BR';
 }
 
+
+function seedDetailsQueryFromSmartCache(
+  queryClient: QueryClient,
+  mediaType: MediaType,
+  id: number,
+  language: Language,
+) {
+  const queryKey = queryKeys.details(mediaType, id, language);
+  if (queryClient.getQueryState(queryKey)?.data !== undefined) return;
+
+  const cached = readMediaDetailsSmartCache(queryClient, mediaType, id, language);
+  if (!cached) return;
+
+  const updatedAt = readMediaDetailsSmartCacheUpdatedAt(
+    queryClient,
+    mediaType,
+    id,
+    language,
+  );
+  if (!updatedAt) return;
+
+  queryClient.setQueryData(queryKey, cached, { updatedAt });
+}
+
+function prefetchMediaDetailsQuery(
+  queryClient: QueryClient,
+  mediaType: MediaType,
+  id: number,
+  language: Language,
+) {
+  seedDetailsQueryFromSmartCache(queryClient, mediaType, id, language);
+  void queryClient.prefetchQuery({
+    queryKey: queryKeys.details(mediaType, id, language),
+    queryFn: detailsQueryFn(mediaType, id, language, queryClient),
+    staleTime: queryStaleTime.details,
+  });
+}
+
 /**
  * Hook compartilhado de detalhes de um título.
  *
@@ -53,8 +92,13 @@ export function useMediaDetails(mediaType: MediaType, id: number, enabled = true
     queryFn: detailsQueryFn(mediaType, id, language, queryClient),
     enabled: enabled && id > 0,
     staleTime: queryStaleTime.details,
-    placeholderData: () =>
+    gcTime: queryStaleTime.details,
+    // initialData (e não placeholderData): com a idade real do smart cache,
+    // dado fresco (< staleTime) não dispara nenhuma request.
+    initialData: () =>
       readMediaDetailsSmartCache(queryClient, mediaType, id, language),
+    initialDataUpdatedAt: () =>
+      readMediaDetailsSmartCacheUpdatedAt(queryClient, mediaType, id, language),
   });
 }
 
@@ -70,11 +114,7 @@ export function useWarmAlternateLanguageMediaDetails(
     if (!enabled || id <= 0) return;
 
     const alternateLanguage = getAlternateLanguage(language);
-    void queryClient.prefetchQuery({
-      queryKey: queryKeys.details(mediaType, id, alternateLanguage),
-      queryFn: detailsQueryFn(mediaType, id, alternateLanguage, queryClient),
-      staleTime: queryStaleTime.details,
-    });
+    prefetchMediaDetailsQuery(queryClient, mediaType, id, alternateLanguage);
   }, [enabled, id, language, mediaType, queryClient]);
 }
 
@@ -96,20 +136,12 @@ export function usePrefetchMediaDetails() {
     ) => {
       if (id <= 0) return;
 
-      void queryClient.prefetchQuery({
-        queryKey: queryKeys.details(mediaType, id, language),
-        queryFn: detailsQueryFn(mediaType, id, language, queryClient),
-        staleTime: queryStaleTime.details,
-      });
+      prefetchMediaDetailsQuery(queryClient, mediaType, id, language);
 
       if (!options.includeAlternateLanguage) return;
 
       const alternateLanguage = getAlternateLanguage(language);
-      void queryClient.prefetchQuery({
-        queryKey: queryKeys.details(mediaType, id, alternateLanguage),
-        queryFn: detailsQueryFn(mediaType, id, alternateLanguage, queryClient),
-        staleTime: queryStaleTime.details,
-      });
+      prefetchMediaDetailsQuery(queryClient, mediaType, id, alternateLanguage);
     },
     [queryClient, language],
   );
