@@ -401,7 +401,7 @@ describe('TMDB endpoints', () => {
       params: { language: 'en-US', append_to_response: 'release_dates,videos' },
     });
     expect(getMock).toHaveBeenNthCalledWith(2, '/movie/1', {
-      params: { language: 'pt-BR' },
+      params: { language: 'pt-BR', append_to_response: 'release_dates,videos' },
     });
     expect(result.release_date).toBe('2026-07-14');
     expect(result.content_rating).toBe('14');
@@ -435,19 +435,21 @@ describe('TMDB endpoints', () => {
       .mockResolvedValueOnce({ data: details })
       .mockResolvedValueOnce({
         data: {
-          id: 1,
-          results: [
-            {
-              id: 'fallback-video',
-              key: 'fallback-key',
-              name: 'Fallback trailer',
-              site: 'YouTube',
-              size: 1080,
-              type: 'Trailer',
-              official: false,
-              published_at: '2026-01-02T00:00:00.000Z',
-            },
-          ],
+          videos: {
+            id: 1,
+            results: [
+              {
+                id: 'fallback-video',
+                key: 'fallback-key',
+                name: 'Fallback trailer',
+                site: 'YouTube',
+                size: 1080,
+                type: 'Trailer',
+                official: false,
+                published_at: '2026-01-02T00:00:00.000Z',
+              },
+            ],
+          },
         },
       });
 
@@ -456,8 +458,8 @@ describe('TMDB endpoints', () => {
     expect(getMock).toHaveBeenNthCalledWith(1, '/tv/1', {
       params: { language: 'pt-BR', append_to_response: 'content_ratings,videos' },
     });
-    expect(getMock).toHaveBeenNthCalledWith(2, '/tv/1/videos', {
-      params: { language: 'en-US' },
+    expect(getMock).toHaveBeenNthCalledWith(2, '/tv/1', {
+      params: { language: 'en-US', append_to_response: 'content_ratings,videos' },
     });
     expect(result.content_rating).toBe('TV-14');
     expect(result.trailer?.key).toBe('fallback-key');
@@ -546,8 +548,8 @@ describe('TMDB endpoints', () => {
 
     const result = await getTvDetails(1, 'pt-BR');
 
-    expect(getMock).toHaveBeenNthCalledWith(2, '/tv/1/videos', {
-      params: { language: 'en-US' },
+    expect(getMock).toHaveBeenNthCalledWith(2, '/tv/1', {
+      params: { language: 'en-US', append_to_response: 'content_ratings,videos' },
     });
     expect(result.trailer).toBeNull();
   });

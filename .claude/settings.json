@@ -4,7 +4,8 @@
       "PowerShell(npx vitest run src/hooks src/config --reporter=basic 2>&1)",
       "PowerShell(npx vitest run src/hooks src/config 2>&1)",
       "PowerShell(npx vitest run 2>&1)",
-      "PowerShell(npx tsc --noEmit 2>&1)"
+      "PowerShell(npx tsc --noEmit 2>&1)",
+      "PowerShell(npx vitest run src/lib/tmdb 2>&1)"
     ]
   }
 }

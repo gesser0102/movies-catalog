@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { env } from '@/config/env';
+import { createDedupingCacheAdapter } from './httpCache';
 
 /**
  * Erro de domínio da nossa camada de API.
@@ -31,6 +32,9 @@ export const tmdbClient = axios.create({
     Accept: 'application/json',
   },
   timeout: 12_000,
+  // Dedupe/micro-cache por URL: queries diferentes do React Query que precisam
+  // da mesma URL da TMDB compartilham um único download.
+  adapter: createDedupingCacheAdapter(axios.getAdapter(axios.defaults.adapter)),
 });
 
 

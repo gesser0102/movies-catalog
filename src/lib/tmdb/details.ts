@@ -16,6 +16,26 @@ import type {
   TvContentRatingsResponse,
 } from '@/types/tmdb';
 
+/**
+ * Todo fetch de detalhes (principal, override de imagens e fallback de
+ * trailer) usa esta MESMA URL por idioma. Assim o dedupe HTTP do
+ * tmdbClient colapsa requests sobrepostas num único download.
+ */
+const DETAILS_APPEND: Record<MediaType, string> = {
+  movie: 'release_dates,videos',
+  tv: 'content_ratings,videos',
+};
+
+function fetchDetailsPayload<T>(
+  mediaType: MediaType,
+  id: number,
+  language: TmdbLanguage,
+) {
+  return tmdbClient.get<T>(`/${mediaType}/${id}`, {
+    params: { language, append_to_response: DETAILS_APPEND[mediaType] },
+  });
+}
+
 function pickBestTrailer(videos: TmdbVideo[]): TmdbVideo | null {
   const trailers = videos
     .filter(
@@ -41,12 +61,10 @@ async function overrideImages<
 ): Promise<T> {
   if (language === BASE_LANGUAGE) return detail;
 
-  const { data } = await tmdbClient.get<{
+  const { data } = await fetchDetailsPayload<{
     poster_path: string | null;
     backdrop_path: string | null;
-  }>(`/${mediaType}/${detail.id}`, {
-    params: { language: BASE_LANGUAGE },
-  });
+  }>(mediaType, detail.id, BASE_LANGUAGE);
   return { ...detail, poster_path: data.poster_path, backdrop_path: data.backdrop_path };
 }
 
@@ -101,11 +119,12 @@ async function withTrailer<T extends TmdbMovieDetails | TmdbTvDetails>(
   }
 
   try {
-    const { data } = await tmdbClient.get<TmdbVideosResponse>(
-      `/${mediaType}/${detail.id}/videos`,
-      { params: { language: VIDEO_FALLBACK_LANGUAGE } },
+    const { data } = await fetchDetailsPayload<{ videos?: TmdbVideosResponse }>(
+      mediaType,
+      detail.id,
+      VIDEO_FALLBACK_LANGUAGE,
     );
-    return { ...detail, trailer: pickBestTrailer(data.results) };
+    return { ...detail, trailer: pickBestTrailer(data.videos?.results ?? []) };
   } catch {
     return { ...detail, trailer: null };
   }
@@ -125,9 +144,7 @@ export async function getMovieDetails(
   id: number,
   language: TmdbLanguage,
 ): Promise<TmdbMovieDetails> {
-  const { data } = await tmdbClient.get<TmdbMovieDetails>(`/movie/${id}`, {
-    params: { language, append_to_response: 'release_dates,videos' },
-  });
+  const { data } = await fetchDetailsPayload<TmdbMovieDetails>('movie', id, language);
   const detail = await withTrailer(data, 'movie', language);
   const detailWithImages = await overrideImages(detail, 'movie', language);
   return stripAppendedDetailFields(await withRegionalMovieReleaseDate(detailWithImages));
@@ -137,9 +154,7 @@ export async function getTvDetails(
   id: number,
   language: TmdbLanguage,
 ): Promise<TmdbTvDetails> {
-  const { data } = await tmdbClient.get<TmdbTvDetails>(`/tv/${id}`, {
-    params: { language, append_to_response: 'content_ratings,videos' },
-  });
+  const { data } = await fetchDetailsPayload<TmdbTvDetails>('tv', id, language);
   const detail = await withTrailer(data, 'tv', language);
   const detailWithImages = await overrideImages(detail, 'tv', language);
   return stripAppendedDetailFields(await withRegionalTvContentRating(detailWithImages));
