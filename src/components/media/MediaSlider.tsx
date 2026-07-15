@@ -1,8 +1,16 @@
-import { useRef, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type ReactNode,
+} from 'react';
 import { Link } from 'react-router-dom';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
-import { MediaCard } from './MediaCard';
+import useEmblaCarousel from 'embla-carousel-react';
+import { MEDIA_CARD_RESTORE_HOVER_EVENT, MediaCard } from './MediaCard';
 import { MediaCardSkeleton } from './MediaCardSkeleton';
 import type { MediaItem } from '@/types/tmdb';
 
@@ -15,12 +23,16 @@ interface MediaSliderProps {
   headerAction?: ReactNode;
 }
 
-// Quantidade de skeletons na fase de loading.
+// Constantes para manipular carousel
 const SKELETON_COUNT = 8;
+const SLIDE_SIZE_CLASS = 'min-w-0 flex-[0_0_150px] tablet:flex-[0_0_180px]';
+const MEDIA_CARD_LINK_SELECTOR = '[data-media-card-link]';
+const VISUAL_SCROLL_IDLE_MS = 80;
+const STABLE_PROGRESS_REPETITIONS_TO_RESTORE = 10;
+const PROGRESS_PRECISION = 3;
 
 /**
- * Carrossel horizontal por categoria, no estilo Prime Video.
- * Optei por scroll nativo com scroll-snap em vez de uma lib de carrossel pra ficar mais leve.
+ * Carrossel horizontal por categoria
  */
 export function MediaSlider({
   title,
@@ -30,14 +42,158 @@ export function MediaSlider({
   seeAllLabel,
   headerAction,
 }: MediaSliderProps) {
-  const trackRef = useRef<HTMLDivElement>(null);
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    align: 'start',
+    containScroll: 'trimSnaps',
+    duration: 32,
+    slidesToScroll: 4,
+    watchDrag: false,
+  });
+  const [isAnimating, setIsAnimating] = useState(false);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const pointerPosition = useRef<{ x: number; y: number } | null>(null);
+  const restoreHoverTimer = useRef<number | undefined>(undefined);
+  const restoredAfterNavigation = useRef(false);
+  const lastProgress = useRef<number | null>(null);
+  const stableProgressRepetitions = useRef(0);
 
-  const scrollByPage = (direction: 'left' | 'right') => {
-    const track = trackRef.current;
-    if (!track) return;
-    const amount = track.clientWidth * 0.8;
-    track.scrollBy({ left: direction === 'left' ? -amount : amount, behavior: 'smooth' });
+  const setViewportRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      viewportRef.current = node;
+      emblaRef(node);
+    },
+    [emblaRef],
+  );
+
+  const rememberPointerPosition = (event: MouseEvent<HTMLDivElement>) => {
+    pointerPosition.current = {
+      x: event.clientX,
+      y: event.clientY,
+    };
   };
+
+  const restoreHoverUnderPointer = useCallback(() => {
+    const viewport = viewportRef.current;
+    const position = pointerPosition.current;
+    if (!viewport || !position) return;
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        const viewportRect = viewport.getBoundingClientRect();
+        const { x, y } = position;
+
+        if (
+          x < viewportRect.left ||
+          x > viewportRect.right ||
+          y < viewportRect.top ||
+          y > viewportRect.bottom
+        ) {
+          return;
+        }
+
+        const hoveredCard = Array.from(
+          viewport.querySelectorAll<HTMLElement>(MEDIA_CARD_LINK_SELECTOR),
+        ).find((card) => {
+          const cardRect = card.getBoundingClientRect();
+          return (
+            x >= cardRect.left &&
+            x <= cardRect.right &&
+            y >= cardRect.top &&
+            y <= cardRect.bottom
+          );
+        });
+
+        hoveredCard?.dispatchEvent(new CustomEvent(MEDIA_CARD_RESTORE_HOVER_EVENT));
+      });
+    });
+  }, []);
+
+  const restorePointerInteractions = useCallback(() => {
+    window.clearTimeout(restoreHoverTimer.current);
+    restoreHoverTimer.current = undefined;
+    setIsAnimating(false);
+
+    if (restoredAfterNavigation.current) return;
+    restoredAfterNavigation.current = true;
+    restoreHoverUnderPointer();
+  }, [restoreHoverUnderPointer]);
+
+  const schedulePointerInteractionsRestore = useCallback(() => {
+    window.clearTimeout(restoreHoverTimer.current);
+    restoreHoverTimer.current = window.setTimeout(() => {
+      restorePointerInteractions();
+    }, VISUAL_SCROLL_IDLE_MS);
+  }, [restorePointerInteractions]);
+
+  const countStableProgress = useCallback(() => {
+    if (!emblaApi) return 0;
+
+    const progress = Number(emblaApi.scrollProgress().toFixed(PROGRESS_PRECISION));
+
+    if (lastProgress.current === progress) {
+      stableProgressRepetitions.current += 1;
+      return stableProgressRepetitions.current;
+    }
+
+    lastProgress.current = progress;
+    stableProgressRepetitions.current = 1;
+    return stableProgressRepetitions.current;
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    const handleScrollStart = () => {
+      const stableCount = countStableProgress();
+
+      if (restoredAfterNavigation.current) return;
+
+      setIsAnimating(true);
+
+      if (stableCount >= STABLE_PROGRESS_REPETITIONS_TO_RESTORE) {
+        restorePointerInteractions();
+        return;
+      }
+
+      schedulePointerInteractionsRestore();
+    };
+    const handleSettle = () => {
+      restorePointerInteractions();
+    };
+
+    emblaApi.on('scroll', handleScrollStart);
+    emblaApi.on('settle', handleSettle);
+
+    return () => {
+      emblaApi.off('scroll', handleScrollStart);
+      emblaApi.off('settle', handleSettle);
+    };
+  }, [
+    emblaApi,
+    countStableProgress,
+    restorePointerInteractions,
+    schedulePointerInteractionsRestore,
+  ]);
+
+  useEffect(() => {
+    return () => window.clearTimeout(restoreHoverTimer.current);
+  }, []);
+
+  const scrollByPage = useCallback((direction: 'left' | 'right') => {
+    lastProgress.current = null;
+    stableProgressRepetitions.current = 0;
+    restoredAfterNavigation.current = false;
+    setIsAnimating(true);
+    window.clearTimeout(restoreHoverTimer.current);
+
+    if (direction === 'left') {
+      emblaApi?.scrollPrev();
+    } else {
+      emblaApi?.scrollNext();
+    }
+
+    schedulePointerInteractionsRestore();
+  }, [emblaApi, schedulePointerInteractionsRestore]);
 
   if (!isLoading && items.length === 0) return null;
 
@@ -68,21 +224,27 @@ export function MediaSlider({
         </button>
 
         <div
-          ref={trackRef}
-          className="flex gap-3 overflow-x-auto scroll-smooth scroll-px-4 px-4 pb-4 pt-2 tablet:scroll-px-6 tablet:px-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          style={{ scrollSnapType: 'x mandatory' }}
+          ref={setViewportRef}
+          onMouseMove={rememberPointerPosition}
+          className="overflow-hidden px-4 pb-4 pt-2 [contain:layout_paint] tablet:px-6"
         >
-          {isLoading
-            ? Array.from({ length: SKELETON_COUNT }).map((_, i) => (
-                <div key={i} style={{ scrollSnapAlign: 'start' }}>
-                  <MediaCardSkeleton variant="slider" />
-                </div>
-              ))
-            : items.map((item) => (
-                <div key={item.id} style={{ scrollSnapAlign: 'start' }}>
-                  <MediaCard item={item} variant="slider" />
-                </div>
-              ))}
+          <div
+            className={`flex gap-3 [backface-visibility:hidden] [transform:translate3d(0,0,0)] [will-change:transform] ${
+              isAnimating ? 'pointer-events-none' : ''
+            }`}
+          >
+            {isLoading
+              ? Array.from({ length: SKELETON_COUNT }).map((_, i) => (
+                  <div key={i} className={`${SLIDE_SIZE_CLASS} transform-gpu`}>
+                    <MediaCardSkeleton variant="slider" />
+                  </div>
+                ))
+              : items.map((item) => (
+                  <div key={item.id} className={`${SLIDE_SIZE_CLASS} transform-gpu`}>
+                    <MediaCard item={item} variant="slider" />
+                  </div>
+                ))}
+          </div>
         </div>
 
         <button

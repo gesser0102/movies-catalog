@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { MediaSlider } from './MediaSlider';
 import { I18nProvider } from '@/contexts/i18n/I18nProvider';
 import type React from 'react';
@@ -18,6 +18,17 @@ const items: MediaItem[] = [
     rating: 5.4,
     popularity: 100,
     year: 2026,
+  },
+  {
+    id: 2,
+    mediaType: 'movie',
+    title: 'Outro Filme',
+    overview: 'Outra sinopse.',
+    posterPath: '/poster-2.jpg',
+    backdropPath: '/backdrop-2.jpg',
+    rating: 7.4,
+    popularity: 80,
+    year: 2025,
   },
 ];
 
@@ -57,31 +68,25 @@ describe('MediaSlider', () => {
     );
   });
 
-  it('keeps the carousel scroll padding aligned with the visual padding', () => {
-    const { container } = renderSlider(<MediaSlider title="Ação" items={items} />);
-    const track = container.querySelector('.scroll-px-4.tablet\\:scroll-px-6');
+  it('keeps the Embla viewport aligned with the visual page padding', () => {
+    const { container } = renderSlider(<MediaSlider title="Acao" items={items} />);
+    const viewport = container.querySelector('.overflow-hidden.px-4.tablet\\:px-6');
 
-    expect(track).toBeInTheDocument();
+    expect(viewport).toBeInTheDocument();
   });
 
-  it('scrolls the track by page when navigation arrows are clicked', () => {
-    const scrollBy = vi.fn();
-    Object.defineProperty(HTMLElement.prototype, 'clientWidth', {
-      configurable: true,
-      value: 1000,
-    });
-    Object.defineProperty(HTMLElement.prototype, 'scrollBy', {
-      configurable: true,
-      value: scrollBy,
-    });
+  it('uses fixed slide sizes so the viewport controls how many cards are visible', () => {
+    const { container } = renderSlider(<MediaSlider title="Acao" items={items} />);
+    const slide = container.querySelector('.flex-\\[0_0_150px\\].tablet\\:flex-\\[0_0_180px\\]');
 
-    renderSlider(<MediaSlider title="Ação" items={items} />);
+    expect(slide).toBeInTheDocument();
+  });
 
-    fireEvent.click(screen.getByLabelText('Scroll right'));
-    expect(scrollBy).toHaveBeenCalledWith({ left: 800, behavior: 'smooth' });
+  it('keeps navigation buttons wired for Embla scrolling', () => {
+    renderSlider(<MediaSlider title="Acao" items={items} />);
 
-    fireEvent.click(screen.getByLabelText('Scroll left'));
-    expect(scrollBy).toHaveBeenCalledWith({ left: -800, behavior: 'smooth' });
+    expect(() => fireEvent.click(screen.getByLabelText('Scroll right'))).not.toThrow();
+    expect(() => fireEvent.click(screen.getByLabelText('Scroll left'))).not.toThrow();
   });
 
   it('renders loading skeletons and hides empty sliders', () => {

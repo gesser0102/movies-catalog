@@ -14,6 +14,8 @@ interface MediaCardProps {
   variant?: 'slider' | 'grid';
 }
 
+export const MEDIA_CARD_RESTORE_HOVER_EVENT = 'media-card:restore-hover';
+
 // Defino aqui que o card preview somente para dispositivos com mouse (hover)
 // Dispositivos com touch vao direto pra detail page 
 const canHover = () =>
@@ -21,6 +23,7 @@ const canHover = () =>
 
 // evita disparar um popover a cada card que o mouse
 const OPEN_DELAY = 380;
+const RESTORED_HOVER_OPEN_DELAY = 0;
 const DETAILS_PATH_PATTERN = /^\/(movies|series)\/[^/]+$/;
 
 /**
@@ -65,15 +68,16 @@ function MediaCardComponent({ item, variant = 'grid' }: MediaCardProps) {
     }
   };
 
-  const openPreview = () => {
+  const openPreview = (delay = OPEN_DELAY) => {
     warmCardResources();
     if (!canHover()) return;
     window.clearTimeout(closeTimer.current);
+    window.clearTimeout(openTimer.current);
 
     openTimer.current = window.setTimeout(() => {
       const rect = tileRef.current?.getBoundingClientRect();
       if (rect) setAnchor(rect);
-    }, OPEN_DELAY);
+    }, delay);
   };
 
   const closePreview = () => {
@@ -91,15 +95,26 @@ function MediaCardComponent({ item, variant = 'grid' }: MediaCardProps) {
 
   useEffect(() => clearTimers, []);
 
+  useEffect(() => {
+    const tile = tileRef.current;
+    if (!tile) return;
+
+    const restorePreview = () => openPreview(RESTORED_HOVER_OPEN_DELAY);
+
+    tile.addEventListener(MEDIA_CARD_RESTORE_HOVER_EVENT, restorePreview);
+    return () => tile.removeEventListener(MEDIA_CARD_RESTORE_HOVER_EVENT, restorePreview);
+  });
+
   return (
     <div className={`shrink-0 ${widthClass}`}>
       <Link
         ref={tileRef}
+        data-media-card-link
         to={to}
         state={linkState}
         className="group block overflow-hidden rounded-xl bg-surface-800 shadow-card ring-1 ring-white/10 transition-all duration-300 hover:-translate-y-0.5 hover:ring-2 hover:ring-brand/70"
         aria-label={item.title}
-        onMouseEnter={openPreview}
+        onMouseEnter={() => openPreview()}
         onMouseLeave={closePreview}
         onFocus={warmCardResources}
         onTouchStart={warmCardResources}
@@ -110,6 +125,8 @@ function MediaCardComponent({ item, variant = 'grid' }: MediaCardProps) {
               src={poster}
               alt={item.title}
               loading="lazy"
+              decoding="async"
+              draggable={false}
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
           ) : (

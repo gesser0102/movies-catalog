@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import useEmblaCarousel from 'embla-carousel-react';
+import Fade from 'embla-carousel-fade';
 import { preloadCatalogRoute, preloadDetailsRoute } from '@/app/router/preloadRoutes';
 import { ContentRatingBadge } from '@/components/media/ContentRatingBadge';
 import { RatingBadge } from '@/components/media/RatingBadge';
@@ -36,6 +38,7 @@ export function Hero({ mediaType, items, isLoading }: HeroProps) {
   const [activeIndex, setActiveIndex] = useState(0);
   const itemSignature = items.map((mediaItem) => mediaItem.id).join('|');
   const featured = useMemo(() => pickRandomFeatured(items), [itemSignature, items]);
+  const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true }, [Fade()]);
   const item = featured[activeIndex] ?? featured[0];
   const prefetchDetails = usePrefetchMediaDetails();
   const { data: details } = useMediaDetails(mediaType, item?.id ?? 0, Boolean(item));
@@ -44,7 +47,25 @@ export function Hero({ mediaType, items, isLoading }: HeroProps) {
 
   useEffect(() => {
     setActiveIndex(0);
-  }, [featured]);
+    emblaApi?.scrollTo(0, true);
+  }, [emblaApi, featured]);
+
+  const syncActiveSlide = useCallback(() => {
+    if (!emblaApi) return;
+    setActiveIndex(emblaApi.selectedScrollSnap());
+  }, [emblaApi]);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+    syncActiveSlide();
+    emblaApi.on('select', syncActiveSlide);
+    emblaApi.on('reInit', syncActiveSlide);
+
+    return () => {
+      emblaApi.off('select', syncActiveSlide);
+      emblaApi.off('reInit', syncActiveSlide);
+    };
+  }, [emblaApi, syncActiveSlide]);
 
   useEffect(() => {
     for (const featuredItem of featured) {
@@ -55,10 +76,10 @@ export function Hero({ mediaType, items, isLoading }: HeroProps) {
   useEffect(() => {
     if (featured.length <= 1) return;
     const timer = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % featured.length);
+      emblaApi?.scrollNext();
     }, AUTOPLAY_MS);
     return () => window.clearInterval(timer);
-  }, [featured.length]);
+  }, [emblaApi, featured.length]);
 
   if (isLoading || featured.length === 0) {
     return (
@@ -66,17 +87,16 @@ export function Hero({ mediaType, items, isLoading }: HeroProps) {
     );
   }
 
-  const backdrop = backdropUrl(item.backdropPath, 'w1280');
   const section = item.mediaType === 'movie' ? 'movies' : 'series';
   const to = `/${section}/${item.id}`;
   const catalogHref = `/${section}/catalog`;
 
   const goToPrevious = () => {
-    setActiveIndex((current) => (current - 1 + featured.length) % featured.length);
+    emblaApi?.scrollPrev();
   };
 
   const goToNext = () => {
-    setActiveIndex((current) => (current + 1) % featured.length);
+    emblaApi?.scrollNext();
   };
 
   const warmDetails = () => {
@@ -86,15 +106,25 @@ export function Hero({ mediaType, items, isLoading }: HeroProps) {
 
   return (
     <section className="relative h-[64vh] min-h-[500px] w-full overflow-hidden tablet:min-h-[540px] desktop:min-h-[560px]">
-      {backdrop && (
-        <img
-          key={item.id}
-          src={backdrop}
-          alt={item.title}
-          fetchPriority="high"
-          className="absolute inset-0 h-full w-full animate-fade-in object-cover object-top"
-        />
-      )}
+      <div ref={emblaRef} className="absolute inset-0 overflow-hidden">
+        <div className="flex h-full">
+          {featured.map((featuredItem, index) => {
+            const slideBackdrop = backdropUrl(featuredItem.backdropPath, 'w1280');
+            return (
+              <div key={featuredItem.id} className="relative h-full min-w-0 flex-[0_0_100%]">
+                {slideBackdrop && (
+                  <img
+                    src={slideBackdrop}
+                    alt={featuredItem.title}
+                    fetchPriority={index === 0 ? 'high' : 'auto'}
+                    className="h-full w-full object-cover object-top"
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
 
       <div className="absolute inset-0 bg-gradient-to-t from-surface-950 via-surface-950/45 to-transparent" />
       <div className="absolute inset-0 bg-gradient-to-r from-surface-950/90 via-surface-950/45 to-transparent" />
@@ -187,7 +217,7 @@ export function Hero({ mediaType, items, isLoading }: HeroProps) {
                 key={featuredItem.id}
                 type="button"
                 aria-label={`Show featured title ${index + 1}`}
-                onClick={() => setActiveIndex(index)}
+                onClick={() => emblaApi?.scrollTo(index)}
                 className={`h-1.5 flex-1 rounded-full transition ${
                   index === activeIndex ? 'bg-brand' : 'bg-white/30 hover:bg-white/55'
                 }`}
