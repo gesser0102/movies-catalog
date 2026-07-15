@@ -47,6 +47,7 @@ export const en = {
     sortPopularity: 'Popularity',
     sortRating: 'Rating',
     sortAlphabetical: 'A–Z',
+    updatingResults: 'Updating results...',
     previous: 'Previous',
     next: 'Next',
     pageOf: (page: number, total: number) => `Page ${page} of ${total}`,

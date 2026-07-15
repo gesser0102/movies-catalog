@@ -49,6 +49,7 @@ export const ptBR: Translation = {
     sortPopularity: 'Popularidade',
     sortRating: 'Avaliação',
     sortAlphabetical: 'A–Z',
+    updatingResults: 'Atualizando resultados...',
     previous: 'Anterior',
     next: 'Próxima',
     pageOf: (page: number, total: number) => `Página ${page} de ${total}`,

@@ -4,6 +4,7 @@ import InputLabel from '@mui/material/InputLabel';
 import Select from '@mui/material/Select';
 import MenuItem from '@mui/material/MenuItem';
 import Pagination from '@mui/material/Pagination';
+import CircularProgress from '@mui/material/CircularProgress';
 import { MediaCard } from '@/components/media/MediaCard';
 import { MediaCardSkeleton } from '@/components/media/MediaCardSkeleton';
 import { ErrorState } from '@/components/feedback/ErrorState';
@@ -53,13 +54,22 @@ export function CatalogPage({ mediaType }: { mediaType: MediaType }) {
   const genres = useGenres(mediaType);
   const genre = genres.data?.find((item) => item.id === selectedGenreId);
 
-  const { data, isLoading, isError, error, refetch, isPlaceholderData } = useCatalogListing({
+  const {
+    data,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isPlaceholderData,
+    isFetching,
+  } = useCatalogListing({
     mediaType,
     sort,
     page,
     genreId: source ? undefined : selectedGenreId,
     collection: source,
   });
+  const isUpdatingResults = isFetching && !isLoading;
 
   const totalPages = Math.min(data?.total_pages ?? 1, MAX_PAGE);
   const baseTitle = mediaType === 'movie' ? t.catalog.moviesTitle : t.catalog.seriesTitle;
@@ -165,7 +175,21 @@ export function CatalogPage({ mediaType }: { mediaType: MediaType }) {
         <EmptyState />
       ) : (
         <>
+          <div className="mb-3 flex h-6 items-center">
+            {isUpdatingResults && (
+              <div
+                role="status"
+                aria-live="polite"
+                className="inline-flex items-center gap-2 rounded-full border border-brand/30 bg-brand/10 px-3 py-1 text-xs font-bold text-brand dark:bg-brand/15"
+              >
+                <CircularProgress size={14} thickness={5} color="inherit" />
+                <span>{t.catalog.updatingResults}</span>
+              </div>
+            )}
+          </div>
+
           <div
+            aria-busy={isUpdatingResults}
             className={`grid grid-cols-2 gap-4 tablet:grid-cols-4 desktop:grid-cols-5 ${
               isPlaceholderData ? 'opacity-60 transition-opacity' : ''
             }`}

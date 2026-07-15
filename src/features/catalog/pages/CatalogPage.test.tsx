@@ -82,6 +82,7 @@ describe('CatalogPage genre filter', () => {
       error: null,
       refetch: vi.fn(),
       isPlaceholderData: false,
+      isFetching: false,
     });
   });
 
@@ -123,6 +124,31 @@ describe('CatalogPage genre filter', () => {
         collection: 'popular',
         genreId: undefined,
       }),
+    );
+  });
+
+  it('shows updating feedback while a filter request is still fetching', () => {
+    useCatalogListingMock.mockReturnValue({
+      data: {
+        page: 1,
+        results: [movieItem],
+        total_pages: 2,
+        total_results: 21,
+      },
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+      isPlaceholderData: true,
+      isFetching: true,
+    });
+
+    renderCatalog('/movies/catalog?genre=28');
+
+    expect(screen.getByRole('status')).toHaveTextContent('Updating results...');
+    expect(screen.getByText('Catalog Movie').closest('[aria-busy]')).toHaveAttribute(
+      'aria-busy',
+      'true',
     );
   });
 });
