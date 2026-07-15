@@ -17,23 +17,23 @@ import type {
 } from '@/types/tmdb';
 
 /**
- * Camada de acesso à TMDB.
+ * Camada de acesso a TMDB.
  *
  * aqui apenas fazemos a request e normalizamos
  * sem cache ou estado pois isto eh funcao do React Query
  */
 
-// Idioma no formato que a TMDB espera (ISO 639-1 + região). 
+// Idioma no formato que a TMDB espera (ISO 639-1 + regiao).
 export type TmdbLanguage = 'en-US' | 'pt-BR';
 
 /**
- * Idioma de REFERÊNCIA — a fonte da verdade para tudo que deve ser estável ao
- * trocar de idioma: ordem da lista, quais itens aparecem e a arte dos pôsteres.
+ * Idioma de REFERENCIA: a fonte da verdade para tudo que deve ser estavel ao
+ * trocar de idioma: ordem da lista, quais itens aparecem e a arte dos posteres.
  *
- * A regra então é: a resposta em `BASE_LANGUAGE` define ordem + membros +
- * imagens; 
- * a resposta no idioma do usuário serve só pra sobrepor o TEXTO
- * (título/sinopse), casando por id. Ver `fetchMediaList` e `overrideImages`.
+ * A regra entao e: a resposta em `BASE_LANGUAGE` define ordem + membros +
+ * imagens;
+ * a resposta no idioma do usuario serve so pra sobrepor o TEXTO
+ * (titulo/sinopse), casando por id. Ver `fetchMediaList` e `overrideImages`.
  */
 const BASE_LANGUAGE: TmdbLanguage = 'pt-BR';
 const PERSON_LANGUAGE: TmdbLanguage = 'en-US';
@@ -44,9 +44,9 @@ const MOVIE_RELEASE_TYPE_PRIORITY = [3, 2, 1, 4, 5, 6];
 const VIDEO_FALLBACK_LANGUAGE: TmdbLanguage = 'en-US';
 
 /**
- * Opções de ordenação expostas na tela de catálogo.
+ * Opcoes de ordenacao expostas na tela de catalogo.
  *
- * Ordenamos no servidor (via /discover) e não no cliente.
+ * Ordenamos no servidor (via /discover) e nao no cliente.
  */
 export type SortOption = 'popularity' | 'rating' | 'alphabetical';
 export type TrendingWindow = 'day' | 'week';
@@ -98,7 +98,7 @@ export async function getGenres(
 const SORT_BY_MAP: Record<SortOption, string> = {
   popularity: 'popularity.desc',
   rating: 'vote_average.desc',
-  alphabetical: 'title.asc', // em /discover/tv vira "name.asc"; ver discoverMedia
+  alphabetical: 'title.asc',
 };
 
 function movieRegionParams(
@@ -119,9 +119,6 @@ function tvTimezoneParams(
     ? { timezone: DEFAULT_TIMEZONE }
     : {};
 }
-
-// Normalização: (movie/tv) -> MediaItem uniforme
-
 
 function yearFromDate(date: string | undefined): number | null {
   if (!date) return null;
@@ -157,7 +154,6 @@ function normalizeTv(tv: TmdbTv): MediaItem {
   };
 }
 
-// Escolhe o normalizador certo em runtime a partir do mediaType.
 function normalize(mediaType: MediaType, raw: TmdbMovie | TmdbTv): MediaItem {
   return mediaType === 'movie'
     ? normalizeMovie(raw as TmdbMovie)
@@ -270,8 +266,6 @@ function pickBestTrailer(videos: TmdbVideo[]): TmdbVideo | null {
   return trailers[0] ?? null;
 }
 
-// fetch de lista com ordem/imagens estáveis e texto localizado
-
 type RawItem = TmdbMovie | TmdbTv;
 
 async function fetchMediaTextFallback(
@@ -291,12 +285,6 @@ async function fetchMediaTextFallback(
   }
 }
 
-/**
- * Busca uma lista da TMDB tratando a resposta em BASE_LANGUAGE como fonte da
- * verdade para ordem, membros e imagens, e usando a resposta traduzida só pra
- * sobrepor o texto (título/sinopse).
- *
- */
 async function fetchMediaList(
   path: string,
   mediaType: MediaType,
@@ -321,14 +309,12 @@ async function fetchMediaList(
 
   const [base, localized] = await Promise.all([baseRequest, localizedRequest]);
 
-  // Mapa id -> texto traduzido
   const translations = localized
     ? new Map(
         localized.data.results.map((raw) => [raw.id, normalize(mediaType, raw)]),
       )
     : null;
 
-  // A ordem e o conjunto vêm da lista BASE; só o texto é sobreposto.
   const missingTranslationIds: number[] = [];
   const results = base.data.results.map((raw) => {
     const item = normalize(mediaType, raw);
@@ -370,15 +356,12 @@ async function fetchMediaList(
   return { ...base.data, results };
 }
 
-// Listagens (usadas nos sliders da Home)
-
 interface ListParams {
   mediaType: MediaType;
   language: TmdbLanguage;
   page?: number;
 }
 
-// "Em alta" na semana — alimenta o slider de destaque. 
 export function getTrending({
   mediaType,
   language,
@@ -390,7 +373,6 @@ export function getTrending({
   });
 }
 
-// Populares o slider principal, e também a base do catálogo padrão. 
 export function getPopular({
   mediaType,
   language,
@@ -402,7 +384,6 @@ export function getPopular({
   });
 }
 
-// Mais bem avaliados. 
 export function getTopRated({
   mediaType,
   language,
@@ -441,8 +422,6 @@ export function getMediaCollection({
     ...tvTimezoneParams(mediaType, collection),
   });
 }
-
-// Catálogo com ordenação via /discover
 
 interface DiscoverParams extends ListParams {
   sort: SortOption;
@@ -511,7 +490,6 @@ function discoverParamsForCollection(
   return {};
 }
 
-// Catálogo ordenável. Usamos /discover porque é o único endpoint que aceita `sort_by` server-side.
 export function discoverMedia({
   mediaType,
   language,
@@ -520,7 +498,6 @@ export function discoverMedia({
   genreId,
   collection,
 }: DiscoverParams): Promise<Paginated<MediaItem>> {
-  // /discover/tv não tem "title", usa "original_name" na ordenação alfabética.
   const sortBy =
     sort === 'alphabetical' && mediaType === 'tv'
       ? 'name.asc'
@@ -529,8 +506,6 @@ export function discoverMedia({
   return fetchMediaList(`/discover/${mediaType}`, mediaType, language, {
     page,
     sort_by: sortBy,
-    // Sem um piso de votos, "melhor avaliado" retorna filmes com nota duvidosas
-    // 10 e 2 votos. Esse filtro traz resultados mais representativos.
     'vote_count.gte': sort === 'rating' ? 200 : 0,
     ...discoverParamsForCollection(mediaType, collection),
     ...(genreId ? { with_genres: genreId } : {}),
@@ -539,25 +514,21 @@ export function discoverMedia({
   });
 }
 
-
-// Detalhes
-
-/**
- * Sobrescreve as imagens de um detalhe pelas do idioma-base, mantendo a mesma
- * regra de consistência das listas. Faz uma request extra só de imagens quando
- * o usuário não está no idioma-base; caso contrário devolve o detalhe intacto.
- */
-async function overrideImages<T extends { id: number; poster_path: string | null; backdrop_path: string | null }>(
+async function overrideImages<
+  T extends { id: number; poster_path: string | null; backdrop_path: string | null },
+>(
   detail: T,
   mediaType: MediaType,
   language: TmdbLanguage,
 ): Promise<T> {
   if (language === BASE_LANGUAGE) return detail;
 
-  const { data } = await tmdbClient.get<{ poster_path: string | null; backdrop_path: string | null }>(
-    `/${mediaType}/${detail.id}`,
-    { params: { language: BASE_LANGUAGE } },
-  );
+  const { data } = await tmdbClient.get<{
+    poster_path: string | null;
+    backdrop_path: string | null;
+  }>(`/${mediaType}/${detail.id}`, {
+    params: { language: BASE_LANGUAGE },
+  });
   return { ...detail, poster_path: data.poster_path, backdrop_path: data.backdrop_path };
 }
 
@@ -656,12 +627,6 @@ export async function getTvDetails(
   return stripAppendedDetailFields(await withRegionalTvContentRating(detailWithImages));
 }
 
-/**
- * Créditos (elenco + equipe). Diferente de sinopse, nome de pessoa não é algo
- * pra "traduzir": pedir em pt-BR faz a TMDB cair no nome no script original
- * (谢苗, 谷垣健治...) por falta de romanização pt. Nomes são dado de referência,
- * então buscamos sempre no BASE_LANGUAGE, que devolve a forma romanizada.
- */
 export async function getCredits(mediaType: MediaType, id: number): Promise<Credits> {
   const { data } = await tmdbClient.get<Credits>(`/${mediaType}/${id}/credits`, {
     params: { language: PERSON_LANGUAGE },
@@ -669,7 +634,6 @@ export async function getCredits(mediaType: MediaType, id: number): Promise<Cred
   return data;
 }
 
-// Similares: alimenta a seção "você também pode gostar" nos detalhes.
 export async function getSimilar(
   mediaType: MediaType,
   id: number,
