@@ -7,6 +7,7 @@ import {
   usePrefetchMediaDetails,
   useWarmAlternateLanguageMediaDetails,
 } from './useMediaDetails';
+import { writeMediaDetailsSmartCache } from './mediaDetailsSmartCache';
 import { I18nProvider } from '@/contexts/i18n/I18nProvider';
 import type { TmdbMovieDetails, TmdbTvDetails } from '@/types/tmdb';
 
@@ -68,6 +69,16 @@ function wrapper({ children }: { children: ReactNode }) {
   );
 }
 
+function wrapperWithClient(client: QueryClient) {
+  return function TestWrapper({ children }: { children: ReactNode }) {
+    return (
+      <QueryClientProvider client={client}>
+        <I18nProvider>{children}</I18nProvider>
+      </QueryClientProvider>
+    );
+  };
+}
+
 describe('useMediaDetails', () => {
   beforeEach(() => {
     localStorage.setItem('movies-catalog:language', 'en-US');
@@ -82,6 +93,36 @@ describe('useMediaDetails', () => {
 
     expect(getMovieDetailsMock).toHaveBeenCalledWith(1, 'en-US');
     expect(getTvDetailsMock).not.toHaveBeenCalled();
+  });
+
+  it('uses smart cached details as placeholder data when the target language is warm', () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    writeMediaDetailsSmartCache(client, 'movie', 1, 'pt-BR', {
+      ...movieDetails,
+      title: 'Filme em portugues',
+      overview: 'Texto em portugues',
+      genres: [{ id: 1, name: 'Acao' }],
+    });
+    writeMediaDetailsSmartCache(client, 'movie', 1, 'en-US', {
+      ...movieDetails,
+      title: 'Cached English movie',
+      overview: 'Cached English text',
+      genres: [{ id: 1, name: 'Action' }],
+    });
+
+    const { result } = renderHook(() => useMediaDetails('movie', 1), {
+      wrapper: wrapperWithClient(client),
+    });
+
+    expect(result.current.data).toMatchObject({
+      title: 'Cached English movie',
+      overview: 'Cached English text',
+      poster_path: movieDetails.poster_path,
+      genres: [{ id: 1, name: 'Action' }],
+    });
+    expect(result.current.isPlaceholderData).toBe(true);
   });
 
   it('fetches TV details through the TV endpoint', async () => {

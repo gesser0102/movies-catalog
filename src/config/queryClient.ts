@@ -66,6 +66,10 @@ export const queryKeys = {
     ] as const,
   details: (mediaType: string, id: number, language: string) =>
     ['details', mediaType, id, language] as const,
+  detailsBase: (mediaType: string, id: number) =>
+    ['detailsBase', mediaType, id] as const,
+  detailsText: (mediaType: string, id: number, language: string) =>
+    ['detailsText', mediaType, id, language] as const,
   credits: (mediaType: string, id: number) =>
     ['credits', mediaType, id] as const,
   similar: (mediaType: string, id: number, language: string) =>

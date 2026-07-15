@@ -25,6 +25,17 @@ describe('query client configuration', () => {
       42,
       'en-US',
     ]);
+    expect(queryKeys.detailsBase('movie', 42)).toEqual([
+      'detailsBase',
+      'movie',
+      42,
+    ]);
+    expect(queryKeys.detailsText('movie', 42, 'pt-BR')).toEqual([
+      'detailsText',
+      'movie',
+      42,
+      'pt-BR',
+    ]);
     expect(queryKeys.genres('movie', 'pt-BR')).toEqual([
       'genres',
       'movie',
