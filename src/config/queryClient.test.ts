@@ -1,6 +1,7 @@
 import { QueryClient } from '@tanstack/react-query';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  installQueryCachePersistence,
   persistQueryCache,
   queryClient,
   queryKeys,
@@ -134,5 +135,65 @@ describe('query client configuration', () => {
 
     expect(expired.getQueryData(queryKeys.genres('movie', 'pt-BR'))).toBeUndefined();
     expect(localStorage.getItem(queryPersistence.storageKey)).toBeNull();
+  });
+
+  it('persists after a quiet window following a persistable change', () => {
+    vi.useFakeTimers();
+    const client = new QueryClient();
+    const uninstall = installQueryCachePersistence(client);
+
+    try {
+      client.setQueryData(queryKeys.genres('movie', 'pt-BR'), [
+        { id: 28, name: 'Acao' },
+      ]);
+
+      vi.advanceTimersByTime(999);
+      expect(localStorage.getItem(queryPersistence.storageKey)).toBeNull();
+
+      vi.advanceTimersByTime(1);
+      expect(localStorage.getItem(queryPersistence.storageKey)).not.toBeNull();
+    } finally {
+      uninstall();
+      vi.useRealTimers();
+    }
+  });
+
+  it('persists within the max wait window even under continuous cache activity', () => {
+    vi.useFakeTimers();
+    const client = new QueryClient();
+    const uninstall = installQueryCachePersistence(client);
+
+    try {
+      // Eventos a cada 500ms nunca deixam o debounce de 1s vencer;
+      // o teto de 5s garante a gravação mesmo assim.
+      for (let id = 1; id <= 10; id += 1) {
+        client.setQueryData(queryKeys.detailsBase('movie', id), { id });
+        vi.advanceTimersByTime(500);
+      }
+
+      expect(localStorage.getItem(queryPersistence.storageKey)).not.toBeNull();
+    } finally {
+      uninstall();
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not schedule persistence when only non-persisted queries change', () => {
+    vi.useFakeTimers();
+    const client = new QueryClient();
+    const uninstall = installQueryCachePersistence(client);
+
+    try {
+      client.setQueryData(queryKeys.popular('movie', 'pt-BR'), { results: [] });
+      client.setQueryData(queryKeys.trending('movie', 'pt-BR', 'week'), {
+        results: [],
+      });
+
+      vi.advanceTimersByTime(10_000);
+      expect(localStorage.getItem(queryPersistence.storageKey)).toBeNull();
+    } finally {
+      uninstall();
+      vi.useRealTimers();
+    }
   });
 });

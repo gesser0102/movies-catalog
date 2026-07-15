@@ -4,6 +4,7 @@ import {
   hydrate,
   type DehydratedState,
   type Query,
+  type QueryCacheNotifyEvent,
 } from '@tanstack/react-query';
 import { TmdbApiError } from '@/lib/tmdb/client';
 
@@ -32,7 +33,10 @@ const persistedQueryMaxAge: Record<string, number> = {
   credits: queryStaleTime.credits,
 };
 const QUERY_CACHE_STORAGE_KEY = 'movies-catalog:react-query-cache:v1';
-const QUERY_CACHE_PERSIST_THROTTLE_MS = 1000;
+// Debounce: grava após 1s de silêncio nos dados persistíveis...
+const QUERY_CACHE_PERSIST_QUIET_MS = 1000;
+// ...mas nunca segura a gravação além deste teto sob atividade contínua.
+const QUERY_CACHE_PERSIST_MAX_WAIT_MS = 5000;
 
 interface PersistedQueryCache {
   state: DehydratedState;
@@ -51,6 +55,24 @@ function shouldPersistQuery(query: Query) {
       query.state.status === 'success' &&
       query.state.data !== undefined,
   );
+}
+
+/**
+ * Só eventos que mudam dados de queries persistíveis agendam gravação.
+ * Eventos de observer (mount/unmount de componentes) e de queries de lista
+ * não mexem no que vai pro localStorage
+ */
+function shouldSchedulePersist(event: QueryCacheNotifyEvent) {
+  if (event.type === 'updated') {
+    if (event.action.type !== 'success') return false;
+  } else if (event.type !== 'added' && event.type !== 'removed') {
+    return false;
+  }
+
+  if (event.query.state.data === undefined) return false;
+
+  const root = getQueryRoot(event.query.queryKey);
+  return Boolean(root && persistedQueryRoots.has(root));
 }
 
 function prunePersistedState(
@@ -222,20 +244,38 @@ export function installQueryCachePersistence(client: QueryClient) {
 
   restorePersistedQueryCache(client);
 
-  let persistTimer: number | undefined;
-  const unsubscribe = client.getQueryCache().subscribe(() => {
-    window.clearTimeout(persistTimer);
-    persistTimer = window.setTimeout(
-      () => persistQueryCache(client),
-      QUERY_CACHE_PERSIST_THROTTLE_MS,
-    );
+  let quietTimer: number | undefined;
+  let maxWaitTimer: number | undefined;
+
+  const flushPersist = () => {
+    window.clearTimeout(quietTimer);
+    window.clearTimeout(maxWaitTimer);
+    quietTimer = undefined;
+    maxWaitTimer = undefined;
+    persistQueryCache(client);
+  };
+
+  const schedulePersist = () => {
+    window.clearTimeout(quietTimer);
+    quietTimer = window.setTimeout(flushPersist, QUERY_CACHE_PERSIST_QUIET_MS);
+    if (maxWaitTimer === undefined) {
+      maxWaitTimer = window.setTimeout(
+        flushPersist,
+        QUERY_CACHE_PERSIST_MAX_WAIT_MS,
+      );
+    }
+  };
+
+  const unsubscribe = client.getQueryCache().subscribe((event) => {
+    if (shouldSchedulePersist(event)) schedulePersist();
   });
 
   const persistBeforeUnload = () => persistQueryCache(client);
   window.addEventListener('pagehide', persistBeforeUnload);
 
   return () => {
-    window.clearTimeout(persistTimer);
+    window.clearTimeout(quietTimer);
+    window.clearTimeout(maxWaitTimer);
     window.removeEventListener('pagehide', persistBeforeUnload);
     unsubscribe();
   };
