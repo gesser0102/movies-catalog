@@ -142,12 +142,22 @@ describe('useMediaDetails', () => {
     expect(getMovieDetailsMock).not.toHaveBeenCalled();
   });
 
-  it('prefetches details using the same key and active language', async () => {
+  it('prefetches details using the same key and active language by default', async () => {
     const { result } = renderHook(() => usePrefetchMediaDetails(), { wrapper });
 
     result.current('movie', 1);
 
     await waitFor(() => expect(getMovieDetailsMock).toHaveBeenCalledWith(1, 'en-US'));
+    expect(getMovieDetailsMock).not.toHaveBeenCalledWith(1, 'pt-BR');
+  });
+
+  it('can prefetch details in the active and alternate languages', async () => {
+    const { result } = renderHook(() => usePrefetchMediaDetails(), { wrapper });
+
+    result.current('movie', 1, { includeAlternateLanguage: true });
+
+    await waitFor(() => expect(getMovieDetailsMock).toHaveBeenCalledWith(1, 'en-US'));
+    await waitFor(() => expect(getMovieDetailsMock).toHaveBeenCalledWith(1, 'pt-BR'));
   });
 
   it('ignores invalid prefetch ids', async () => {

@@ -10,6 +10,10 @@ import {
 import type { Language } from '@/contexts/i18n/translations';
 import type { MediaType, TmdbMovieDetails, TmdbTvDetails } from '@/types/tmdb';
 
+interface PrefetchMediaDetailsOptions {
+  includeAlternateLanguage?: boolean;
+}
+
 /** Constrói a queryFn de detalhes conforme o tipo de mídia. */
 function detailsQueryFn(
   mediaType: MediaType,
@@ -85,11 +89,25 @@ export function usePrefetchMediaDetails() {
   const { language } = useI18n();
 
   return useCallback(
-    (mediaType: MediaType, id: number) => {
+    (
+      mediaType: MediaType,
+      id: number,
+      options: PrefetchMediaDetailsOptions = {},
+    ) => {
       if (id <= 0) return;
-      queryClient.prefetchQuery({
+
+      void queryClient.prefetchQuery({
         queryKey: queryKeys.details(mediaType, id, language),
         queryFn: detailsQueryFn(mediaType, id, language, queryClient),
+        staleTime: queryStaleTime.details,
+      });
+
+      if (!options.includeAlternateLanguage) return;
+
+      const alternateLanguage = getAlternateLanguage(language);
+      void queryClient.prefetchQuery({
+        queryKey: queryKeys.details(mediaType, id, alternateLanguage),
+        queryFn: detailsQueryFn(mediaType, id, alternateLanguage, queryClient),
         staleTime: queryStaleTime.details,
       });
     },

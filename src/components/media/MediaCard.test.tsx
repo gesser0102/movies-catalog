@@ -8,6 +8,9 @@ const { prefetchMock } = vi.hoisted(() => ({
   prefetchMock: vi.fn(),
 }));
 
+let originalIntersectionObserver: typeof IntersectionObserver | undefined;
+let didMockIntersectionObserver = false;
+
 vi.mock('@/hooks/useMediaDetails', () => ({
   usePrefetchMediaDetails: () => prefetchMock,
 }));
@@ -54,6 +57,41 @@ function setHoverSupport(matches: boolean) {
   });
 }
 
+function mockIntersectionObserver() {
+  let observerCallback: IntersectionObserverCallback = () => undefined;
+  const observe = vi.fn();
+  const disconnect = vi.fn();
+
+  const IntersectionObserverMock = vi.fn(function (
+    callback: IntersectionObserverCallback,
+  ) {
+    observerCallback = callback;
+    return {
+      observe,
+      disconnect,
+      unobserve: vi.fn(),
+      takeRecords: vi.fn(() => []),
+      root: null,
+      rootMargin: '',
+      thresholds: [],
+    };
+  });
+
+  window.IntersectionObserver = IntersectionObserverMock;
+  didMockIntersectionObserver = true;
+
+  return {
+    disconnect,
+    observe,
+    trigger: (isIntersecting = true) => {
+      observerCallback(
+        [{ isIntersecting } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+    },
+  };
+}
+
 describe('MediaCard', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -62,9 +100,15 @@ describe('MediaCard', () => {
     vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue(
       new DOMRect(20, 30, 180, 270),
     );
+    originalIntersectionObserver = window.IntersectionObserver;
+    didMockIntersectionObserver = false;
   });
 
   afterEach(() => {
+    if (didMockIntersectionObserver) {
+      (window as Window & { IntersectionObserver?: typeof IntersectionObserver })
+        .IntersectionObserver = originalIntersectionObserver;
+    }
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -94,7 +138,9 @@ describe('MediaCard', () => {
 
     fireEvent.mouseEnter(screen.getByRole('link', { name: 'Preview Movie' }));
 
-    expect(prefetchMock).toHaveBeenCalledWith('movie', 77);
+    expect(prefetchMock).toHaveBeenCalledWith('movie', 77, {
+      includeAlternateLanguage: true,
+    });
     expect(screen.queryByTestId('hover-preview')).not.toBeInTheDocument();
 
     act(() => {
@@ -102,6 +148,23 @@ describe('MediaCard', () => {
     });
 
     expect(screen.getByTestId('hover-preview')).toHaveTextContent('Preview: Preview Movie');
+  });
+
+  it('prefetches current and alternate language details when the card approaches the viewport', () => {
+    const observer = mockIntersectionObserver();
+    renderCard();
+
+    expect(observer.observe).toHaveBeenCalled();
+    expect(prefetchMock).not.toHaveBeenCalled();
+
+    act(() => {
+      observer.trigger();
+      vi.advanceTimersByTime(120);
+    });
+
+    expect(prefetchMock).toHaveBeenCalledWith('movie', 77, {
+      includeAlternateLanguage: true,
+    });
   });
 
   it('prefetches details but does not open hover preview on touch-only devices', () => {
@@ -113,7 +176,9 @@ describe('MediaCard', () => {
       vi.advanceTimersByTime(380);
     });
 
-    expect(prefetchMock).toHaveBeenCalledWith('movie', 77);
+    expect(prefetchMock).toHaveBeenCalledWith('movie', 77, {
+      includeAlternateLanguage: true,
+    });
     expect(screen.queryByTestId('hover-preview')).not.toBeInTheDocument();
   });
 

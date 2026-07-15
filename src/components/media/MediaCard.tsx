@@ -25,6 +25,16 @@ const canHover = () =>
 const OPEN_DELAY = 380;
 const RESTORED_HOVER_OPEN_DELAY = 0;
 const DETAILS_PATH_PATTERN = /^\/(movies|series)\/[^/]+$/;
+const VIEWPORT_PREFETCH_ROOT_MARGIN = '360px 240px';
+
+type IdleWindow = Window &
+  typeof globalThis & {
+    requestIdleCallback?: (
+      callback: IdleRequestCallback,
+      options?: IdleRequestOptions,
+    ) => number;
+    cancelIdleCallback?: (handle: number) => void;
+  };
 
 /**
  * Card de pôster — a unidade visual básica do catálogo.
@@ -45,6 +55,7 @@ function MediaCardComponent({ item, variant = 'grid' }: MediaCardProps) {
   const openTimer = useRef<number | undefined>(undefined);
   const closeTimer = useRef<number | undefined>(undefined);
   const preloadedImage = useRef(false);
+  const viewportPrefetchedFor = useRef<string | null>(null);
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
 
   const prefetchDetails = usePrefetchMediaDetails();
@@ -56,7 +67,7 @@ function MediaCardComponent({ item, variant = 'grid' }: MediaCardProps) {
 
   const warmCardResources = () => {
     preloadDetailsRoute();
-    prefetchDetails(item.mediaType, item.id);
+    prefetchDetails(item.mediaType, item.id, { includeAlternateLanguage: true });
 
     if (!preloadedImage.current) {
       const src = backdropUrl(item.backdropPath, 'w780');
@@ -94,6 +105,60 @@ function MediaCardComponent({ item, variant = 'grid' }: MediaCardProps) {
   }, [anchor]);
 
   useEffect(() => clearTimers, []);
+
+  useEffect(() => {
+    const tile = tileRef.current;
+    const mediaKey = `${item.mediaType}:${item.id}`;
+    if (!tile || viewportPrefetchedFor.current === mediaKey) return;
+    if (
+      typeof window === 'undefined' ||
+      typeof window.IntersectionObserver !== 'function'
+    ) {
+      return;
+    }
+
+    const idleWindow = window as IdleWindow;
+    let idleHandle: number | undefined;
+    let timeoutHandle: number | undefined;
+
+    const warmVisibleCard = () => {
+      if (viewportPrefetchedFor.current === mediaKey) return;
+      viewportPrefetchedFor.current = mediaKey;
+      prefetchDetails(item.mediaType, item.id, { includeAlternateLanguage: true });
+    };
+
+    const scheduleWarmVisibleCard = () => {
+      if (idleWindow.requestIdleCallback) {
+        idleHandle = idleWindow.requestIdleCallback(warmVisibleCard, {
+          timeout: 900,
+        });
+        return;
+      }
+
+      timeoutHandle = window.setTimeout(warmVisibleCard, 120);
+    };
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        observer.disconnect();
+        scheduleWarmVisibleCard();
+      },
+      {
+        root: null,
+        rootMargin: VIEWPORT_PREFETCH_ROOT_MARGIN,
+        threshold: 0.01,
+      },
+    );
+
+    observer.observe(tile);
+
+    return () => {
+      observer.disconnect();
+      if (idleHandle !== undefined) idleWindow.cancelIdleCallback?.(idleHandle);
+      if (timeoutHandle !== undefined) window.clearTimeout(timeoutHandle);
+    };
+  }, [item.id, item.mediaType, prefetchDetails]);
 
   useEffect(() => {
     const tile = tileRef.current;
