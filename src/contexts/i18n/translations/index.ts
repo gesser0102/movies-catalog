@@ -4,6 +4,10 @@ import { ptBR } from './pt-BR';
 
 export type Language = 'en-US' | 'pt-BR';
 
+export function getAlternateLanguage(language: Language): Language {
+  return language === 'pt-BR' ? 'en-US' : 'pt-BR';
+}
+
 export type Translation = typeof en;
 
 export const dictionaries: Record<Language, Translation> = {

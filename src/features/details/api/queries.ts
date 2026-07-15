@@ -4,7 +4,7 @@ import { queryKeys, queryStaleTime } from '@/config/queryClient';
 import { useI18n } from '@/contexts/i18n/useI18n';
 import { getCredits, getSimilar } from '@/lib/tmdb/endpoints';
 import { useMediaDetails } from '@/hooks/useMediaDetails';
-import type { Language } from '@/contexts/i18n/translations';
+import { getAlternateLanguage } from '@/contexts/i18n/translations';
 import type { MediaType } from '@/types/tmdb';
 
 /**
@@ -17,10 +17,6 @@ import type { MediaType } from '@/types/tmdb';
  */
 
 export const useDetails = useMediaDetails;
-
-function getAlternateLanguage(language: Language): Language {
-  return language === 'pt-BR' ? 'en-US' : 'pt-BR';
-}
 
 export function useCredits(mediaType: MediaType, id: number) {
   // Sem idioma aqui de propósito: nomes de pessoas vêm sempre do idioma-base

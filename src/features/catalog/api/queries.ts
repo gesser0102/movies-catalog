@@ -14,7 +14,7 @@ import {
   type SortOption,
   type TrendingWindow,
 } from '@/lib/tmdb/endpoints';
-import type { Language } from '@/contexts/i18n/translations';
+import { getAlternateLanguage } from '@/contexts/i18n/translations';
 import type { MediaType } from '@/types/tmdb';
 
 /**
@@ -33,10 +33,6 @@ const HOME_COLLECTIONS: Record<MediaType, CatalogCollection[]> = {
 };
 
 const HOME_TRENDING_WINDOWS: TrendingWindow[] = ['day', 'week'];
-
-function getAlternateLanguage(language: Language): Language {
-  return language === 'pt-BR' ? 'en-US' : 'pt-BR';
-}
 
 export function useWarmAlternateLanguageHomeQueries(mediaType: MediaType) {
   const queryClient = useQueryClient();

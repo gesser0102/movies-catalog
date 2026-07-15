@@ -8,7 +8,10 @@ import {
   readMediaDetailsSmartCacheUpdatedAt,
   writeMediaDetailsSmartCache,
 } from './mediaDetailsSmartCache';
-import type { Language } from '@/contexts/i18n/translations';
+import {
+  getAlternateLanguage,
+  type Language,
+} from '@/contexts/i18n/translations';
 import type { MediaType, TmdbMovieDetails, TmdbTvDetails } from '@/types/tmdb';
 
 interface PrefetchMediaDetailsOptions {
@@ -31,10 +34,6 @@ function detailsQueryFn(
     writeMediaDetailsSmartCache(queryClient, mediaType, id, language, detail);
     return detail;
   };
-}
-
-function getAlternateLanguage(language: Language): Language {
-  return language === 'pt-BR' ? 'en-US' : 'pt-BR';
 }
 
 
