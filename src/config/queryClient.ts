@@ -239,10 +239,10 @@ export function persistQueryCache(client: QueryClient) {
   }
 }
 
+
+//Assina o cache e agenda gravações no localStorage
 export function installQueryCachePersistence(client: QueryClient) {
   if (!canUseBrowserStorage()) return () => {};
-
-  restorePersistedQueryCache(client);
 
   let quietTimer: number | undefined;
   let maxWaitTimer: number | undefined;
