@@ -274,6 +274,23 @@ function pickBestTrailer(videos: TmdbVideo[]): TmdbVideo | null {
 
 type RawItem = TmdbMovie | TmdbTv;
 
+async function fetchMediaTextFallback(
+  mediaType: MediaType,
+  id: number,
+  language: TmdbLanguage,
+): Promise<Pick<MediaItem, 'title' | 'overview'> | null> {
+  try {
+    const path = mediaType === 'movie' ? `/movie/${id}` : `/tv/${id}`;
+    const { data } = await tmdbClient.get<RawItem>(path, {
+      params: { language },
+    });
+    const item = normalize(mediaType, data);
+    return { title: item.title, overview: item.overview };
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Busca uma lista da TMDB tratando a resposta em BASE_LANGUAGE como fonte da
  * verdade para ordem, membros e imagens, e usando a resposta traduzida só pra
@@ -312,15 +329,43 @@ async function fetchMediaList(
     : null;
 
   // A ordem e o conjunto vêm da lista BASE; só o texto é sobreposto.
+  const missingTranslationIds: number[] = [];
   const results = base.data.results.map((raw) => {
     const item = normalize(mediaType, raw);
     const translated = translations?.get(item.id);
     if (translated) {
       item.title = translated.title;
       item.overview = translated.overview;
+    } else if (needsTranslation) {
+      missingTranslationIds.push(item.id);
     }
     return item;
   });
+
+  if (missingTranslationIds.length > 0) {
+    const fallbackTexts = await Promise.all(
+      missingTranslationIds.map((id) =>
+        fetchMediaTextFallback(mediaType, id, language),
+      ),
+    );
+    const fallbackTextById = new Map(
+      fallbackTexts
+        .map((text, index) => [missingTranslationIds[index], text] as const)
+        .filter(
+          (entry): entry is readonly [
+            number,
+            Pick<MediaItem, 'title' | 'overview'>,
+          ] => Boolean(entry[1]),
+        ),
+    );
+
+    for (const item of results) {
+      const fallbackText = fallbackTextById.get(item.id);
+      if (!fallbackText) continue;
+      item.title = fallbackText.title;
+      item.overview = fallbackText.overview;
+    }
+  }
 
   return { ...base.data, results };
 }

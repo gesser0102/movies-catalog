@@ -116,6 +116,45 @@ describe('TMDB endpoints', () => {
     });
   });
 
+  it('falls back to item details when a localized list page misses a base item', async () => {
+    getMock
+      .mockResolvedValueOnce({
+        data: page([
+          movie({ id: 1, title: 'Primeiro PT', overview: 'Sinopse 1 PT' }),
+          movie({ id: 2, title: 'Todo Mundo em Pânico', overview: 'Sinopse 2 PT' }),
+        ]),
+      })
+      .mockResolvedValueOnce({
+        data: page([
+          movie({ id: 1, title: 'First EN', overview: 'Overview 1 EN' }),
+        ]),
+      })
+      .mockResolvedValueOnce({
+        data: movie({ id: 2, title: 'Scary Movie', overview: 'Overview 2 EN' }),
+      });
+
+    const result = await getMediaCollection({
+      mediaType: 'movie',
+      language: 'en-US',
+      collection: 'now_playing',
+    });
+
+    expect(getMock).toHaveBeenNthCalledWith(1, '/movie/now_playing', {
+      params: { language: 'pt-BR', region: 'BR', page: 1 },
+    });
+    expect(getMock).toHaveBeenNthCalledWith(2, '/movie/now_playing', {
+      params: { language: 'en-US', region: 'BR', page: 1 },
+    });
+    expect(getMock).toHaveBeenNthCalledWith(3, '/movie/2', {
+      params: { language: 'en-US' },
+    });
+    expect(result.results.map((item) => item.title)).toEqual([
+      'First EN',
+      'Scary Movie',
+    ]);
+    expect(result.results[1].posterPath).toBe('/poster-pt.jpg');
+  });
+
   it('fetches the official localized genre list for the selected media type', async () => {
     getMock.mockResolvedValueOnce({
       data: {
