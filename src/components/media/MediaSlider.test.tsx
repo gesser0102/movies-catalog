@@ -1,11 +1,25 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MediaSlider } from './MediaSlider';
 import { I18nProvider } from '@/contexts/i18n/I18nProvider';
 import type React from 'react';
 import type { MediaItem } from '@/types/tmdb';
+
+const emblaApiMock = vi.hoisted(() => ({
+  canScrollNext: vi.fn(() => true),
+  canScrollPrev: vi.fn(() => true),
+  off: vi.fn(),
+  on: vi.fn(),
+  scrollNext: vi.fn(),
+  scrollPrev: vi.fn(),
+  scrollProgress: vi.fn(() => 0),
+}));
+
+vi.mock('embla-carousel-react', () => ({
+  default: () => [vi.fn(), emblaApiMock],
+}));
 
 const items: MediaItem[] = [
   {
@@ -47,6 +61,12 @@ function renderSlider(ui: React.ReactElement) {
 }
 
 describe('MediaSlider', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    emblaApiMock.canScrollNext.mockReturnValue(true);
+    emblaApiMock.canScrollPrev.mockReturnValue(true);
+  });
+
   it('renders title, media cards and the see more link', () => {
     renderSlider(
       <MediaSlider
@@ -82,11 +102,24 @@ describe('MediaSlider', () => {
     expect(slide).toBeInTheDocument();
   });
 
-  it('keeps navigation buttons wired for Embla scrolling', () => {
+  it('keeps navigation buttons wired for Embla scrolling', async () => {
     renderSlider(<MediaSlider title="Acao" items={items} />);
 
-    expect(() => fireEvent.click(screen.getByLabelText('Scroll right'))).not.toThrow();
-    expect(() => fireEvent.click(screen.getByLabelText('Scroll left'))).not.toThrow();
+    fireEvent.click(await screen.findByLabelText('Scroll right'));
+    fireEvent.click(await screen.findByLabelText('Scroll left'));
+
+    expect(emblaApiMock.scrollNext).toHaveBeenCalledTimes(1);
+    expect(emblaApiMock.scrollPrev).toHaveBeenCalledTimes(1);
+  });
+
+  it('only renders arrows for directions that still have scrollable content', async () => {
+    emblaApiMock.canScrollPrev.mockReturnValue(false);
+    emblaApiMock.canScrollNext.mockReturnValue(true);
+
+    renderSlider(<MediaSlider title="Acao" items={items} />);
+
+    expect(screen.queryByLabelText('Scroll left')).not.toBeInTheDocument();
+    expect(await screen.findByLabelText('Scroll right')).toBeInTheDocument();
   });
 
   it('renders loading skeletons and hides empty sliders', () => {

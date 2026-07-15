@@ -50,6 +50,8 @@ export function MediaSlider({
     watchDrag: false,
   });
   const [isAnimating, setIsAnimating] = useState(false);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
   const viewportRef = useRef<HTMLDivElement | null>(null);
   const pointerPosition = useRef<{ x: number; y: number } | null>(null);
   const restoreHoverTimer = useRef<number | undefined>(undefined);
@@ -140,8 +142,16 @@ export function MediaSlider({
     return stableProgressRepetitions.current;
   }, [emblaApi]);
 
+  const syncScrollButtons = useCallback(() => {
+    if (!emblaApi) return;
+    setCanScrollPrev(emblaApi.canScrollPrev());
+    setCanScrollNext(emblaApi.canScrollNext());
+  }, [emblaApi]);
+
   useEffect(() => {
     if (!emblaApi) return;
+
+    syncScrollButtons();
 
     const handleScrollStart = () => {
       const stableCount = countStableProgress();
@@ -159,12 +169,17 @@ export function MediaSlider({
     };
     const handleSettle = () => {
       restorePointerInteractions();
+      syncScrollButtons();
     };
 
+    emblaApi.on('select', syncScrollButtons);
+    emblaApi.on('reInit', syncScrollButtons);
     emblaApi.on('scroll', handleScrollStart);
     emblaApi.on('settle', handleSettle);
 
     return () => {
+      emblaApi.off('select', syncScrollButtons);
+      emblaApi.off('reInit', syncScrollButtons);
       emblaApi.off('scroll', handleScrollStart);
       emblaApi.off('settle', handleSettle);
     };
@@ -173,6 +188,7 @@ export function MediaSlider({
     countStableProgress,
     restorePointerInteractions,
     schedulePointerInteractionsRestore,
+    syncScrollButtons,
   ]);
 
   useEffect(() => {
@@ -214,14 +230,16 @@ export function MediaSlider({
       </div>
 
       <div className="relative -mt-2 pt-2">
-        <button
-          type="button"
-          onClick={() => scrollByPage('left')}
-          aria-label="Scroll left"
-          className="absolute inset-y-0 left-0 z-20 hidden w-14 items-center justify-center bg-gradient-to-r from-black/80 via-black/40 to-transparent text-white opacity-0 transition-opacity duration-200 hover:from-black/90 group-hover/slider:opacity-100 tablet:flex"
-        >
-          <ChevronLeftIcon style={{ fontSize: 40 }} />
-        </button>
+        {canScrollPrev && (
+          <button
+            type="button"
+            onClick={() => scrollByPage('left')}
+            aria-label="Scroll left"
+            className="absolute inset-y-0 left-0 z-20 hidden w-14 items-center justify-center bg-gradient-to-r from-black/80 via-black/40 to-transparent text-white opacity-0 transition-opacity duration-200 hover:from-black/90 group-hover/slider:opacity-100 tablet:flex"
+          >
+            <ChevronLeftIcon style={{ fontSize: 40 }} />
+          </button>
+        )}
 
         <div
           ref={setViewportRef}
@@ -247,14 +265,16 @@ export function MediaSlider({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => scrollByPage('right')}
-          aria-label="Scroll right"
-          className="absolute inset-y-0 right-0 z-20 hidden w-14 items-center justify-center bg-gradient-to-l from-black/80 via-black/40 to-transparent text-white opacity-0 transition-opacity duration-200 hover:from-black/90 group-hover/slider:opacity-100 tablet:flex"
-        >
-          <ChevronRightIcon style={{ fontSize: 40 }} />
-        </button>
+        {canScrollNext && (
+          <button
+            type="button"
+            onClick={() => scrollByPage('right')}
+            aria-label="Scroll right"
+            className="absolute inset-y-0 right-0 z-20 hidden w-14 items-center justify-center bg-gradient-to-l from-black/80 via-black/40 to-transparent text-white opacity-0 transition-opacity duration-200 hover:from-black/90 group-hover/slider:opacity-100 tablet:flex"
+          >
+            <ChevronRightIcon style={{ fontSize: 40 }} />
+          </button>
+        )}
       </div>
     </section>
   );
