@@ -551,4 +551,292 @@ describe('TMDB endpoints', () => {
     });
     expect(result.trailer).toBeNull();
   });
+
+  it('fetches TV genres from the TV genre endpoint', async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        genres: [{ id: 10765, name: 'Sci-Fi & Fantasy' }],
+      },
+    });
+
+    const result = await getGenres('tv', 'en-US');
+
+    expect(getMock).toHaveBeenCalledWith('/genre/tv/list', {
+      params: { language: 'en-US' },
+    });
+    expect(result).toEqual([{ id: 10765, name: 'Sci-Fi & Fantasy' }]);
+  });
+
+  it('does not apply movie region params to TV popularity requests', async () => {
+    getMock.mockResolvedValue({ data: page([tv()]) });
+
+    await getPopular({ mediaType: 'tv', language: 'pt-BR' });
+
+    expect(getMock).toHaveBeenCalledWith('/tv/popular', {
+      params: { language: 'pt-BR', page: 1 },
+    });
+  });
+
+  it('rejects collections that do not belong to the selected media type', async () => {
+    expect(() =>
+      getMediaCollection({
+        mediaType: 'tv',
+        language: 'pt-BR',
+        collection: 'now_playing',
+      }),
+    ).toThrow('Collection "now_playing" is not available for tv.');
+
+    expect(getMock).not.toHaveBeenCalled();
+  });
+
+  it('adds only the representative vote filter to top rated TV discover pages', async () => {
+    getMock.mockResolvedValue({ data: page([tv()]) });
+
+    await discoverMedia({
+      mediaType: 'tv',
+      language: 'pt-BR',
+      sort: 'popularity',
+      page: 1,
+      collection: 'top_rated',
+    });
+
+    expect(getMock).toHaveBeenCalledWith('/discover/tv', {
+      params: {
+        language: 'pt-BR',
+        page: 1,
+        sort_by: 'popularity.desc',
+        'vote_count.gte': 200,
+        include_adult: false,
+      },
+    });
+  });
+
+  it('does not add collection filters for discover collections without a discover mapping', async () => {
+    getMock.mockResolvedValue({ data: page([movie()]) });
+
+    await discoverMedia({
+      mediaType: 'movie',
+      language: 'pt-BR',
+      sort: 'popularity',
+      page: 1,
+      collection: 'trending',
+    });
+
+    expect(getMock).toHaveBeenCalledWith('/discover/movie', {
+      params: {
+        language: 'pt-BR',
+        page: 1,
+        sort_by: 'popularity.desc',
+        'vote_count.gte': 0,
+        include_adult: false,
+        include_video: false,
+        region: 'BR',
+      },
+    });
+  });
+
+  it('keeps base text when localized list fallback details cannot be fetched', async () => {
+    getMock
+      .mockResolvedValueOnce({
+        data: page([
+          movie({ id: 1, title: 'Base PT', overview: 'Base overview PT' }),
+        ]),
+      })
+      .mockResolvedValueOnce({ data: page([]) })
+      .mockRejectedValueOnce(new Error('missing fallback'));
+
+    const result = await getTrending({
+      mediaType: 'movie',
+      language: 'en-US',
+      timeWindow: 'day',
+    });
+
+    expect(getMock).toHaveBeenNthCalledWith(3, '/movie/1', {
+      params: { language: 'en-US' },
+    });
+    expect(result.results[0]).toMatchObject({
+      title: 'Base PT',
+      overview: 'Base overview PT',
+    });
+  });
+
+  it('normalizes invalid release years to null in list items', async () => {
+    getMock.mockResolvedValueOnce({
+      data: page([movie({ release_date: 'not-a-date' })]),
+    });
+
+    const result = await getTrending({
+      mediaType: 'movie',
+      language: 'pt-BR',
+      timeWindow: 'day',
+    });
+
+    expect(result.results[0].year).toBeNull();
+  });
+
+  it('prefers official trailers even when unofficial trailers are newer', async () => {
+    const details: TmdbMovieDetails = {
+      ...movie(),
+      genres: [],
+      runtime: 90,
+      tagline: null,
+      status: 'Released',
+      release_dates: {
+        id: 1,
+        results: [],
+      },
+      videos: {
+        id: 1,
+        results: [
+          {
+            id: 'unofficial',
+            key: 'unofficial-key',
+            name: 'Unofficial trailer',
+            site: 'YouTube',
+            size: 1080,
+            type: 'Trailer',
+            official: false,
+            published_at: '2026-02-01T00:00:00.000Z',
+          },
+          {
+            id: 'official',
+            key: 'official-key',
+            name: 'Official trailer',
+            site: 'YouTube',
+            size: 1080,
+            type: 'Trailer',
+            official: true,
+            published_at: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      },
+    };
+
+    getMock.mockResolvedValueOnce({ data: details });
+
+    const result = await getMovieDetails(1, 'pt-BR');
+
+    expect(result.trailer?.key).toBe('official-key');
+  });
+
+  it('uses the newest trailer when candidates have the same official flag', async () => {
+    const details: TmdbMovieDetails = {
+      ...movie(),
+      genres: [],
+      runtime: 90,
+      tagline: null,
+      status: 'Released',
+      release_dates: {
+        id: 1,
+        results: [],
+      },
+      videos: {
+        id: 1,
+        results: [
+          {
+            id: 'old',
+            key: 'old-key',
+            name: 'Old trailer',
+            site: 'YouTube',
+            size: 1080,
+            type: 'Trailer',
+            official: true,
+            published_at: '2026-01-01T00:00:00.000Z',
+          },
+          {
+            id: 'new',
+            key: 'new-key',
+            name: 'New trailer',
+            site: 'YouTube',
+            size: 1080,
+            type: 'Trailer',
+            official: true,
+            published_at: '2026-02-01T00:00:00.000Z',
+          },
+        ],
+      },
+    };
+
+    getMock.mockResolvedValueOnce({ data: details });
+
+    const result = await getMovieDetails(1, 'pt-BR');
+
+    expect(result.trailer?.key).toBe('new-key');
+  });
+
+  it('uses fallback BR release date and certification when priority release types are absent', async () => {
+    const details: TmdbMovieDetails = {
+      ...movie({ release_date: '2026-01-01' }),
+      genres: [],
+      runtime: 90,
+      tagline: null,
+      status: 'Released',
+      release_dates: {
+        id: 1,
+        results: [
+          {
+            iso_3166_1: 'BR',
+            release_dates: [
+              {
+                certification: '16',
+                descriptors: [],
+                iso_639_1: '',
+                note: '',
+                release_date: '2026-08-20T00:00:00.000Z',
+                type: 9,
+              },
+            ],
+          },
+        ],
+      },
+      videos: {
+        id: 1,
+        results: [
+          {
+            id: 'trailer',
+            key: 'trailer-key',
+            name: 'Trailer',
+            site: 'YouTube',
+            size: 1080,
+            type: 'Trailer',
+            official: true,
+            published_at: '2026-01-01T00:00:00.000Z',
+          },
+        ],
+      },
+    };
+
+    getMock.mockResolvedValueOnce({ data: details });
+
+    const result = await getMovieDetails(1, 'pt-BR');
+
+    expect(result.release_date).toBe('2026-08-20');
+    expect(result.content_rating).toBe('16');
+  });
+
+  it('keeps TV details usable when content rating fallback request fails', async () => {
+    const details: TmdbTvDetails = {
+      ...tv(),
+      genres: [],
+      episode_run_time: [],
+      number_of_seasons: 1,
+      number_of_episodes: 1,
+      tagline: null,
+      status: 'Returning Series',
+      videos: { id: 1, results: [] },
+    };
+
+    getMock
+      .mockResolvedValueOnce({ data: details })
+      .mockResolvedValueOnce({
+        data: { poster_path: '/poster-pt.jpg', backdrop_path: '/backdrop-pt.jpg' },
+      })
+      .mockRejectedValueOnce(new Error('ratings unavailable'));
+
+    const result = await getTvDetails(1, 'en-US');
+
+    expect(getMock).toHaveBeenNthCalledWith(3, '/tv/1/content_ratings');
+    expect(result.content_rating).toBeUndefined();
+    expect(result.poster_path).toBe('/poster-pt.jpg');
+  });
 });
