@@ -129,11 +129,20 @@ export function CatalogPage({ mediaType }: { mediaType: MediaType }) {
         >
           {!source && (
             <FormControl size="small" className="w-full min-w-0 tablet:w-auto tablet:min-w-[180px]">
-              <InputLabel id="genre-label">{t.catalog.genreLabel}</InputLabel>
+              <InputLabel id="genre-label" shrink>
+                {t.catalog.genreLabel}
+              </InputLabel>
               <Select
                 labelId="genre-label"
                 label={t.catalog.genreLabel}
                 value={selectedGenreId ?? ''}
+                displayEmpty
+                renderValue={(value) =>
+                  value === ''
+                    ? t.catalog.allGenres
+                    : genres.data?.find((item) => item.id === Number(value))?.name ??
+                      t.catalog.allGenres
+                }
                 onChange={(e) => {
                   const value = e.target.value;
                   updateParams({
