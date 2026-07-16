@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import useEmblaCarousel from 'embla-carousel-react';
+import type { EmblaCarouselType } from 'embla-carousel';
 import { MEDIA_CARD_RESTORE_HOVER_EVENT, MediaCard } from './MediaCard';
 import { MediaCardSkeleton } from './MediaCardSkeleton';
 import type { MediaItem } from '@/types/tmdb';
@@ -31,6 +32,15 @@ const VISUAL_SCROLL_IDLE_MS = 80;
 const STABLE_PROGRESS_REPETITIONS_TO_RESTORE = 10;
 const PROGRESS_PRECISION = 3;
 
+function allowTouchDrag(_emblaApi: EmblaCarouselType, event: MouseEvent | TouchEvent) {
+  const isTouchEvent = event.type.startsWith('touch');
+  const isCoarsePointer =
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(pointer: coarse)').matches;
+
+  return isTouchEvent || isCoarsePointer;
+}
+
 /**
  * Carrossel horizontal por categoria
  */
@@ -47,7 +57,7 @@ export function MediaSlider({
     containScroll: 'trimSnaps',
     duration: 32,
     slidesToScroll: 4,
-    watchDrag: false,
+    watchDrag: allowTouchDrag,
   });
   const [isAnimating, setIsAnimating] = useState(false);
   const [canScrollPrev, setCanScrollPrev] = useState(false);

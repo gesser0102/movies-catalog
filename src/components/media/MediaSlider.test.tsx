@@ -16,9 +16,13 @@ const emblaApiMock = vi.hoisted(() => ({
   scrollPrev: vi.fn(),
   scrollProgress: vi.fn(() => 0),
 }));
+const emblaHookMock = vi.hoisted(() => ({
+  emblaRef: vi.fn(),
+  useEmblaCarousel: vi.fn(),
+}));
 
 vi.mock('embla-carousel-react', () => ({
-  default: () => [vi.fn(), emblaApiMock],
+  default: emblaHookMock.useEmblaCarousel,
 }));
 
 const items: MediaItem[] = [
@@ -63,6 +67,10 @@ function renderSlider(ui: React.ReactElement) {
 describe('MediaSlider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    emblaHookMock.useEmblaCarousel.mockReturnValue([
+      emblaHookMock.emblaRef,
+      emblaApiMock,
+    ]);
     emblaApiMock.canScrollNext.mockReturnValue(true);
     emblaApiMock.canScrollPrev.mockReturnValue(true);
   });
@@ -110,6 +118,15 @@ describe('MediaSlider', () => {
 
     expect(emblaApiMock.scrollNext).toHaveBeenCalledTimes(1);
     expect(emblaApiMock.scrollPrev).toHaveBeenCalledTimes(1);
+  });
+
+  it('allows touch drag on mobile while keeping mouse drag disabled', () => {
+    renderSlider(<MediaSlider title="Acao" items={items} />);
+
+    const options = emblaHookMock.useEmblaCarousel.mock.calls[0][0];
+
+    expect(options.watchDrag(emblaApiMock, new MouseEvent('mousedown'))).toBe(false);
+    expect(options.watchDrag(emblaApiMock, new Event('touchstart'))).toBe(true);
   });
 
   it('only renders arrows for directions that still have scrollable content', async () => {
