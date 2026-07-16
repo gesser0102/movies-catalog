@@ -1,10 +1,16 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import Button from '@mui/material/Button';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import GroupsIcon from '@mui/icons-material/Groups';
+import useEmblaCarousel from 'embla-carousel-react';
+import type { EmblaCarouselType } from 'embla-carousel';
 import { CastCard } from './CastCard';
 import type { CastMember } from '@/types/tmdb';
+
+const COMPACT_CAST_LIMIT = 4;
+const CAST_SLIDE_SIZE_CLASS =
+  'min-w-0 flex-[0_0_132px] tablet:flex-[0_0_150px] desktop:flex-[0_0_160px]';
 
 interface CastSliderProps {
   title: string;
@@ -13,54 +19,76 @@ interface CastSliderProps {
   onAction: () => void;
 }
 
+function allowTouchDrag(_emblaApi: EmblaCarouselType, event: Event) {
+  const isTouchEvent = event.type.startsWith('touch');
+  const isCoarsePointer =
+    typeof window !== 'undefined' &&
+    window.matchMedia?.('(pointer: coarse)').matches;
+
+  return isTouchEvent || isCoarsePointer;
+}
+
 export function CastSlider({
   title,
   members,
   actionLabel,
   onAction,
 }: CastSliderProps) {
-  const trackRef = useRef<HTMLDivElement>(null);
+  const isCompact = members.length <= COMPACT_CAST_LIMIT;
+  const [emblaRef, emblaApi] = useEmblaCarousel({
+    active: !isCompact,
+    align: 'start',
+    containScroll: 'trimSnaps',
+    duration: 32,
+    slidesToScroll: 1,
+    watchDrag: allowTouchDrag,
+    breakpoints: {
+      '(min-width: 768px)': {
+        slidesToScroll: 4,
+      },
+    },
+  });
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
-  const isCompact = members.length <= 4;
 
   const syncScrollControls = useCallback(() => {
-    const track = trackRef.current;
-    if (!track) return;
+    if (!emblaApi || isCompact) {
+      setCanScrollLeft(false);
+      setCanScrollRight(false);
+      return;
+    }
 
-    const maxScrollLeft = track.scrollWidth - track.clientWidth;
-    setCanScrollLeft(track.scrollLeft > 1);
-    setCanScrollRight(track.scrollLeft < maxScrollLeft - 1);
-  }, []);
+    setCanScrollLeft(emblaApi.canScrollPrev());
+    setCanScrollRight(emblaApi.canScrollNext());
+  }, [emblaApi, isCompact]);
 
-  const scrollByPage = (direction: 'left' | 'right') => {
-    const track = trackRef.current;
-    if (!track) return;
-    track.scrollBy({
-      left: direction === 'left' ? -track.clientWidth * 0.8 : track.clientWidth * 0.8,
-      behavior: 'smooth',
-    });
-  };
+  const scrollByPage = useCallback(
+    (direction: 'left' | 'right') => {
+      if (direction === 'left') {
+        emblaApi?.scrollPrev();
+      } else {
+        emblaApi?.scrollNext();
+      }
+    },
+    [emblaApi],
+  );
 
   useEffect(() => {
-    if (isCompact) return;
-
-    const track = trackRef.current;
-    if (!track) return;
+    if (!emblaApi || isCompact) {
+      syncScrollControls();
+      return;
+    }
 
     syncScrollControls();
 
-    const handleScroll = () => syncScrollControls();
-    const handleResize = () => syncScrollControls();
-
-    track.addEventListener('scroll', handleScroll, { passive: true });
-    window.addEventListener('resize', handleResize);
+    emblaApi.on('select', syncScrollControls);
+    emblaApi.on('reInit', syncScrollControls);
 
     return () => {
-      track.removeEventListener('scroll', handleScroll);
-      window.removeEventListener('resize', handleResize);
+      emblaApi.off('select', syncScrollControls);
+      emblaApi.off('reInit', syncScrollControls);
     };
-  }, [isCompact, members.length, syncScrollControls]);
+  }, [emblaApi, isCompact, members.length, syncScrollControls]);
 
   if (isCompact) {
     return (
@@ -114,16 +142,17 @@ export function CastSlider({
           </button>
         )}
 
-        <div
-          ref={trackRef}
-          className="flex gap-3 overflow-x-auto scroll-smooth pb-4 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          style={{ scrollSnapType: 'x mandatory' }}
-        >
-          {members.map((member) => (
-            <div key={`${member.id}-${member.order}`} style={{ scrollSnapAlign: 'start' }}>
-              <CastCard member={member} />
-            </div>
-          ))}
+        <div ref={emblaRef} className="overflow-hidden pb-4 pt-2">
+          <div className="flex gap-3 [backface-visibility:hidden] [transform:translate3d(0,0,0)] [will-change:transform]">
+            {members.map((member) => (
+              <div
+                key={`${member.id}-${member.order}`}
+                className={`${CAST_SLIDE_SIZE_CLASS} transform-gpu`}
+              >
+                <CastCard member={member} />
+              </div>
+            ))}
+          </div>
         </div>
 
         {canScrollRight && (
