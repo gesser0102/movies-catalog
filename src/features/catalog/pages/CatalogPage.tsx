@@ -135,7 +135,7 @@ export function CatalogPage({ mediaType }: { mediaType: MediaType }) {
               <Select
                 labelId="genre-label"
                 label={t.catalog.genreLabel}
-                value={selectedGenreId ?? ''}
+                value={selectedGenreId ? String(selectedGenreId) : ''}
                 displayEmpty
                 renderValue={(value) =>
                   value === ''
@@ -152,7 +152,7 @@ export function CatalogPage({ mediaType }: { mediaType: MediaType }) {
               >
                 <MenuItem value="">{t.catalog.allGenres}</MenuItem>
                 {(genres.data ?? []).map((item) => (
-                  <MenuItem key={item.id} value={item.id}>
+                  <MenuItem key={item.id} value={String(item.id)}>
                     {item.name}
                   </MenuItem>
                 ))}
