@@ -56,8 +56,13 @@ export function MediaSlider({
     align: 'start',
     containScroll: 'trimSnaps',
     duration: 32,
-    slidesToScroll: 4,
+    slidesToScroll: 1,
     watchDrag: allowTouchDrag,
+    breakpoints: {
+      '(min-width: 768px)': {
+        slidesToScroll: 4,
+      },
+    },
   });
   const [isAnimating, setIsAnimating] = useState(false);
   const [canScrollPrev, setCanScrollPrev] = useState(false);

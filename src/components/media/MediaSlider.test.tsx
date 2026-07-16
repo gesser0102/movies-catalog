@@ -129,6 +129,15 @@ describe('MediaSlider', () => {
     expect(options.watchDrag(emblaApiMock, new Event('touchstart'))).toBe(true);
   });
 
+  it('uses one slide per swipe on mobile and four slides on wider screens', () => {
+    renderSlider(<MediaSlider title="Acao" items={items} />);
+
+    const options = emblaHookMock.useEmblaCarousel.mock.calls[0][0];
+
+    expect(options.slidesToScroll).toBe(1);
+    expect(options.breakpoints['(min-width: 768px)'].slidesToScroll).toBe(4);
+  });
+
   it('only renders arrows for directions that still have scrollable content', async () => {
     emblaApiMock.canScrollPrev.mockReturnValue(false);
     emblaApiMock.canScrollNext.mockReturnValue(true);
