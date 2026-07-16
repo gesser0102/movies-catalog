@@ -14,6 +14,9 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
+      // Sem include, o Vitest só reporta arquivos carregados pelos testes —
+      // arquivo sem teste nenhum ficava invisível e inflava o percentual.
+      include: ['src/**/*.{ts,tsx}'],
       exclude: [
         'dist/**',
         'src/main.tsx',
