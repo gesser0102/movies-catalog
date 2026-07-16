@@ -32,7 +32,8 @@ const persistedQueryMaxAge: Record<string, number> = {
   detailsText: queryStaleTime.details,
   credits: queryStaleTime.credits,
 };
-const QUERY_CACHE_STORAGE_KEY = 'movies-catalog:react-query-cache:v1';
+// v2: detailsBase/detailsText ganharam o campo de temporadas (seasons).
+const QUERY_CACHE_STORAGE_KEY = 'movies-catalog:react-query-cache:v2';
 // Debounce: grava após 1s de silêncio nos dados persistíveis...
 const QUERY_CACHE_PERSIST_QUIET_MS = 1000;
 // ...mas nunca segura a gravação além deste teto sob atividade contínua.
@@ -146,6 +147,11 @@ queryClient.setQueryDefaults(['detailsText'], {
   gcTime: queryGcTime.detailsSmartCache,
 });
 
+queryClient.setQueryDefaults(['season'], {
+  staleTime: queryStaleTime.details,
+  gcTime: queryGcTime.details,
+});
+
 /**
  * Centrilar keys, para evitar que sejam invalidads em outro lugar por uma escrita diferente.
  */
@@ -185,6 +191,8 @@ export const queryKeys = {
     ['credits', mediaType, id] as const,
   similar: (mediaType: string, id: number, language: string) =>
     ['similar', mediaType, id, language] as const,
+  season: (id: number, seasonNumber: number, language: string) =>
+    ['season', 'tv', id, seasonNumber, language] as const,
   genres: (mediaType: string, language: string) =>
     ['genres', mediaType, language] as const,
 } as const;

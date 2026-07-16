@@ -49,10 +49,36 @@ const tvPt = {
   episode_run_time: [45],
   number_of_seasons: 2,
   number_of_episodes: 16,
+  seasons: [
+    {
+      id: 100,
+      season_number: 1,
+      name: 'Temporada 1',
+      overview: 'Primeira temporada.',
+      poster_path: null,
+      episode_count: 8,
+      air_date: '2026-01-01',
+      vote_average: 7,
+    },
+  ],
   tagline: null,
   status: 'Returning Series',
   content_rating: '16',
   trailer: null,
+} satisfies TmdbTvDetails;
+
+const tvEn = {
+  ...tvPt,
+  name: 'The Series',
+  overview: 'English series text.',
+  genres: [{ id: 18, name: 'Drama' }],
+  seasons: [
+    {
+      ...tvPt.seasons![0],
+      name: 'Season 1',
+      overview: 'First season.',
+    },
+  ],
 } satisfies TmdbTvDetails;
 
 describe('mediaDetailsSmartCache', () => {
@@ -99,5 +125,32 @@ describe('mediaDetailsSmartCache', () => {
       episode_run_time: [45],
       genres: [{ id: 18, name: 'Drama' }],
     });
+  });
+
+  it('keeps season stable data shared while season names follow the language', () => {
+    const queryClient = new QueryClient();
+
+    writeMediaDetailsSmartCache(queryClient, 'tv', 2, 'pt-BR', tvPt);
+    writeMediaDetailsSmartCache(queryClient, 'tv', 2, 'en-US', tvEn);
+
+    const mergedPt = readMediaDetailsSmartCache(queryClient, 'tv', 2, 'pt-BR');
+    const mergedEn = readMediaDetailsSmartCache(queryClient, 'tv', 2, 'en-US');
+
+    expect((mergedPt as TmdbTvDetails).seasons).toEqual([
+      expect.objectContaining({
+        season_number: 1,
+        episode_count: 8,
+        name: 'Temporada 1',
+        overview: 'Primeira temporada.',
+      }),
+    ]);
+    expect((mergedEn as TmdbTvDetails).seasons).toEqual([
+      expect.objectContaining({
+        season_number: 1,
+        episode_count: 8,
+        name: 'Season 1',
+        overview: 'First season.',
+      }),
+    ]);
   });
 });

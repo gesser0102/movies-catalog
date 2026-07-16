@@ -9,6 +9,7 @@ import OndemandVideoIcon from '@mui/icons-material/OndemandVideo';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { DetailsPageSkeleton } from '../components/DetailsPageSkeleton';
 import { CastSlider } from '../components/CastSlider';
+import { SeasonEpisodes } from '../components/SeasonEpisodes';
 import { FullCreditsModal } from '../components/FullCreditsModal';
 import { TrailerModal } from '../components/TrailerModal';
 import { ContentRatingBadge } from '@/components/media/ContentRatingBadge';
@@ -252,6 +253,16 @@ export function DetailsPage({ mediaType }: { mediaType: MediaType }) {
           </div>
         </div>
       </div>
+
+      {/* Episódios por temporada — a lista de seasons já vem no detalhe, sem
+          request extra; a key reseta a temporada selecionada ao trocar de série */}
+      {!isMovie && ((data as TmdbTvDetails).seasons?.length ?? 0) > 0 && (
+        <SeasonEpisodes
+          key={numericId}
+          tvId={numericId}
+          seasons={(data as TmdbTvDetails).seasons ?? []}
+        />
+      )}
 
       {cast.length > 0 && (
         <CastSlider

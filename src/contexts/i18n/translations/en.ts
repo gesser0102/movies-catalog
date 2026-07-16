@@ -75,6 +75,8 @@ export const en = {
     similar: 'You might also like',
     seasons: 'Seasons',
     episodes: 'Episodes',
+    episode: 'Episode',
+    seasonLabel: 'Season',
     minutes: (min: number) => `${min} min`,
     unknown: 'Not available',
   },

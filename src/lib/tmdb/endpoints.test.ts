@@ -6,6 +6,7 @@ import {
   getMediaCollection,
   getMovieDetails,
   getPopular,
+  getSeasonEpisodes,
   getSimilar,
   getTopRated,
   getTrending,
@@ -465,6 +466,39 @@ describe('TMDB endpoints', () => {
     expect(result.trailer?.key).toBe('fallback-key');
     expect(result.content_ratings).toBeUndefined();
     expect(result.videos).toBeUndefined();
+  });
+
+  it('fetches season episodes in the selected language', async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        id: 500,
+        season_number: 1,
+        name: 'Temporada 1',
+        overview: '',
+        air_date: '2026-01-01',
+        episodes: [
+          {
+            id: 9001,
+            episode_number: 1,
+            season_number: 1,
+            name: 'Piloto',
+            overview: 'Primeiro episódio.',
+            still_path: null,
+            air_date: '2026-01-01',
+            runtime: 45,
+            vote_average: 8,
+          },
+        ],
+      },
+    });
+
+    const result = await getSeasonEpisodes(99, 1, 'pt-BR');
+
+    expect(getMock).toHaveBeenCalledWith('/tv/99/season/1', {
+      params: { language: 'pt-BR' },
+    });
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ episode_number: 1, name: 'Piloto' });
   });
 
   it('fetches credits in English to keep person names romanized', async () => {

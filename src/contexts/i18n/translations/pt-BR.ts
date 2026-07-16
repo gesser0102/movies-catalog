@@ -77,6 +77,8 @@ export const ptBR: Translation = {
     similar: 'Você também pode gostar',
     seasons: 'Temporadas',
     episodes: 'Episódios',
+    episode: 'Episódio',
+    seasonLabel: 'Temporada',
     minutes: (min: number) => `${min} min`,
     unknown: 'Indisponível',
   },

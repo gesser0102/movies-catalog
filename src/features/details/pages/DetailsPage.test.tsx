@@ -79,6 +79,12 @@ vi.mock('../components/TrailerModal', () => ({
   }) => (open ? <div role="dialog">Trailer for {title}</div> : null),
 }));
 
+vi.mock('../components/SeasonEpisodes', () => ({
+  SeasonEpisodes: ({ tvId }: { tvId: number }) => (
+    <section aria-label="season-episodes">Episodes for {tvId}</section>
+  ),
+}));
+
 vi.mock('@/components/media/MediaSlider', () => ({
   MediaSlider: ({ title, items }: { title: string; items: MediaItem[] }) => (
     <section aria-label={title}>
@@ -132,6 +138,18 @@ const tvDetails = {
   episode_run_time: [45],
   number_of_seasons: 3,
   number_of_episodes: 24,
+  seasons: [
+    {
+      id: 100,
+      season_number: 1,
+      name: 'Season 1',
+      overview: '',
+      poster_path: null,
+      episode_count: 8,
+      air_date: '2026-02-01',
+      vote_average: 7.5,
+    },
+  ],
   tagline: null,
   status: 'Returning Series',
   content_rating: '16',
@@ -287,6 +305,25 @@ describe('DetailsPage', () => {
     expect(screen.getByText(/3 Seasons/i)).toBeInTheDocument();
     expect(useWarmAlternateLanguageMediaDetailsMock).toHaveBeenCalledWith('tv', 20, true);
     expect(useWarmAlternateLanguageSimilarMock).toHaveBeenCalledWith('tv', 20, true);
+  });
+
+  it('renders the season episodes section for TV titles only', () => {
+    renderDetailsPage();
+    expect(screen.queryByLabelText('season-episodes')).not.toBeInTheDocument();
+
+    useDetailsMock.mockReturnValue({
+      data: tvDetails,
+      isLoading: false,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+    useSimilarMock.mockReturnValue({ data: [] });
+
+    renderDetailsPage({ mediaType: 'tv' });
+    expect(screen.getByLabelText('season-episodes')).toHaveTextContent(
+      'Episodes for 20',
+    );
   });
 
   it('prefetches similar item details for the recommendation row', () => {

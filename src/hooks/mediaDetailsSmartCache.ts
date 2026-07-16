@@ -5,11 +5,20 @@ import type {
   Genre,
   MediaType,
   TmdbMovieDetails,
+  TmdbSeasonSummary,
   TmdbTvDetails,
   TmdbVideo,
 } from '@/types/tmdb';
 
 type MediaDetails = TmdbMovieDetails | TmdbTvDetails;
+
+type SeasonStable = Omit<TmdbSeasonSummary, 'name' | 'overview'>;
+
+interface SeasonText {
+  season_number: number;
+  name: string;
+  overview: string;
+}
 
 interface SharedStableDetails {
   id: number;
@@ -37,6 +46,7 @@ interface TvStableDetails extends SharedStableDetails {
   episode_run_time: number[];
   number_of_seasons: number;
   number_of_episodes: number;
+  seasons?: SeasonStable[];
 }
 
 type StableDetails = MovieStableDetails | TvStableDetails;
@@ -55,6 +65,7 @@ interface TvTextDetails {
   overview: string;
   tagline: string | null;
   genres: Genre[];
+  seasonTexts?: SeasonText[];
 }
 
 type TextDetails = MovieTextDetails | TvTextDetails;
@@ -98,6 +109,7 @@ function toStableDetails(mediaType: MediaType, detail: MediaDetails): StableDeta
     episode_run_time: tv.episode_run_time,
     number_of_seasons: tv.number_of_seasons,
     number_of_episodes: tv.number_of_episodes,
+    seasons: tv.seasons?.map(({ name, overview, ...stable }) => stable),
   };
 }
 
@@ -119,6 +131,11 @@ function toTextDetails(mediaType: MediaType, detail: MediaDetails): TextDetails 
     overview: tv.overview,
     tagline: tv.tagline,
     genres: tv.genres,
+    seasonTexts: tv.seasons?.map((season) => ({
+      season_number: season.season_number,
+      name: season.name,
+      overview: season.overview,
+    })),
   };
 }
 
@@ -147,9 +164,22 @@ function mergeDetails(base: StableDetails, text: TextDetails): MediaDetails | un
   }
 
   if (base.mediaType === 'tv' && text.mediaType === 'tv') {
+    const seasonTextByNumber = new Map(
+      (text.seasonTexts ?? []).map((season) => [season.season_number, season]),
+    );
+    const seasons = base.seasons?.map((season) => {
+      const seasonText = seasonTextByNumber.get(season.season_number);
+      return {
+        ...season,
+        name: seasonText?.name ?? '',
+        overview: seasonText?.overview ?? '',
+      };
+    });
+
     return {
       id: base.id,
       name: text.name,
+      seasons,
       original_name: base.original_name,
       overview: text.overview,
       poster_path: base.poster_path,

@@ -129,12 +129,44 @@ export interface TvContentRatingsResponse {
   results: TvContentRatingEntry[];
 }
 
-// Detalhe de série (endpoint /tv/{id}).
+export interface TmdbSeasonSummary {
+  id: number;
+  season_number: number;
+  name: string;
+  overview: string;
+  poster_path: string | null;
+  episode_count: number;
+  air_date: string | null;
+  vote_average: number;
+}
+
+export interface TmdbEpisode {
+  id: number;
+  episode_number: number;
+  season_number: number;
+  name: string;
+  overview: string;
+  still_path: string | null;
+  air_date: string | null;
+  runtime: number | null;
+  vote_average: number;
+}
+
+export interface TmdbSeasonDetails {
+  id: number;
+  season_number: number;
+  name: string;
+  overview: string;
+  air_date: string | null;
+  episodes: TmdbEpisode[];
+}
+
 export interface TmdbTvDetails extends TmdbTv {
   genres: Genre[];
   episode_run_time: number[];
   number_of_seasons: number;
   number_of_episodes: number;
+  seasons?: TmdbSeasonSummary[];
   tagline: string | null;
   status: string;
   content_rating?: string | null;
