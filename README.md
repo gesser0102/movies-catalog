@@ -17,6 +17,7 @@ alternancia de idioma e tema.
 - Axios: cliente HTTP para a API da TMDB.
 - Material UI 6: componentes e icones.
 - Tailwind CSS 3: utilitarios de estilo e layout.
+- Embla Carousel 8: carrosseis da home, recomendados e elenco.
 - Vitest + Testing Library: testes automatizados.
 - Nginx: servidor estatico usado na imagem Docker.
 - Docker: build e execucao em container.
@@ -70,6 +71,10 @@ Observacoes:
 - `TMDB_ACCESS_TOKEN` nao tem o prefixo `VITE_` de proposito: o token nunca
   entra no bundle do navegador. Quem o injeta e o proxy sera o dev server do
   Vite em desenvolvimento e o nginx em producao (`location /api/tmdb/`).
+- `VITE_TMDB_API_BASE_URL` deve permanecer como `/api/tmdb` para usar o proxy
+  local em desenvolvimento e o proxy do nginx em producao. Nao use a URL direta
+  `https://api.themoviedb.org/3` no app, senao o navegador chamara a TMDB sem o
+  header `Authorization`.
 - Variaveis `VITE_*` sao aplicadas em tempo de build. Se trocar alguma delas
   em producao, gere um novo build. O token, por ser de runtime, pode ser
   trocado apenas reiniciando o container.
@@ -102,12 +107,16 @@ Para testar o build gerado:
 npm run preview
 ```
 
+O `preview` tambem usa o proxy definido no Vite. Portanto, mantenha o
+`TMDB_ACCESS_TOKEN` no `.env.local` para que as chamadas em `/api/tmdb` funcionem.
+
 ## Rodando com Docker
 
 O Dockerfile usa build multi-stage:
 
 - Node faz o build do Vite;
-- Nginx serve os arquivos estaticos de `dist` e faz proxy da TMDB
+- Nginx serve os arquivos estaticos de `dist` usando `nginx.conf` como template
+  e faz proxy da TMDB
   (`/api/tmdb/`), injetando o token no servidor e cacheando respostas na
   borda por 5 minutos;
 - a aplicacao fica exposta na porta `80` dentro do container.
@@ -140,6 +149,21 @@ Depois acesse:
 http://localhost:8080
 ```
 
+Para ambientes de producao com Docker, configure no runtime:
+
+```env
+TMDB_ACCESS_TOKEN="seu_read_access_token_da_tmdb"
+```
+
+E, no build, mantenha a base publica da API como:
+
+```env
+VITE_TMDB_API_BASE_URL="/api/tmdb"
+```
+
+Assim o bundle chama o proprio dominio da aplicacao em `/api/tmdb`, e o nginx
+injeta o token no servidor antes de encaminhar para a TMDB.
+
 ## Scripts disponiveis
 
 ```bash
@@ -155,9 +179,10 @@ npm run test:coverage  # roda testes com coverage
 
 ```text
 .
-  docs/                       # documentacao por tema (arquitetura, cache, deploy...)
+  .env.example                # exemplo das variaveis de ambiente
   nginx.conf                  # servidor estatico da imagem Docker
   Dockerfile                  # build multi-stage (Node -> Nginx)
+  package.json                # scripts e dependencias
   src/                        # codigo da aplicacao
 ```
 
@@ -188,7 +213,6 @@ src/
     i18n/                     # provider de idioma + dicionarios pt-BR/en-US
                               # (inclui a regra de idioma alternativo)
     theme/                    # modo claro/escuro
-    scroll/                   # restauracao de scroll entre rotas
 
   features/                   # cada feature agrupa api, paginas e componentes
     catalog/
