@@ -3,7 +3,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { HoverPreviewCard } from './HoverPreviewCard';
 import { I18nProvider } from '@/contexts/i18n/I18nProvider';
-import type { MediaItem, TmdbMovieDetails } from '@/types/tmdb';
+import type { MediaItem, TmdbMovieDetails, TmdbTvDetails } from '@/types/tmdb';
 
 const { useMediaDetailsMock } = vi.hoisted(() => ({
   useMediaDetailsMock: vi.fn(),
@@ -44,12 +44,41 @@ const details: TmdbMovieDetails = {
   trailer: null,
 };
 
-function renderPreview() {
+const tvItem: MediaItem = {
+  ...item,
+  id: 20,
+  mediaType: 'tv',
+  title: 'Localized Series',
+};
+
+const tvDetails: TmdbTvDetails = {
+  id: 20,
+  name: 'Localized Series',
+  original_name: 'Localized Series',
+  overview: 'Series synopsis from the details query.',
+  poster_path: '/poster.jpg',
+  backdrop_path: '/backdrop.jpg',
+  vote_average: 8.2,
+  popularity: 300,
+  first_air_date: '2026-01-10',
+  genre_ids: [18],
+  genres: [{ id: 18, name: 'Drama' }],
+  episode_run_time: [45],
+  number_of_seasons: 3,
+  number_of_episodes: 24,
+  seasons: [],
+  tagline: null,
+  status: 'Returning Series',
+  content_rating: '14',
+  trailer: null,
+};
+
+function renderPreview(previewItem = item) {
   return render(
     <MemoryRouter>
       <I18nProvider>
         <HoverPreviewCard
-          item={item}
+          item={previewItem}
           anchor={new DOMRect(120, 80, 180, 270)}
           onMouseEnter={vi.fn()}
           onMouseLeave={vi.fn()}
@@ -94,6 +123,20 @@ describe('HoverPreviewCard', () => {
     expect(screen.getByRole('link', { name: /view details/i })).toHaveAttribute(
       'href',
       '/movies/10',
+    );
+  });
+
+  it('renders the season count for series using the same details cache hook', () => {
+    useMediaDetailsMock.mockReturnValue({ data: tvDetails });
+
+    renderPreview(tvItem);
+
+    expect(useMediaDetailsMock).toHaveBeenCalledWith('tv', 20);
+    expect(screen.getByText('3 Seasons')).toBeInTheDocument();
+    expect(screen.getByText('45min')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /view details/i })).toHaveAttribute(
+      'href',
+      '/series/20',
     );
   });
 });

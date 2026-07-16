@@ -80,6 +80,16 @@ export function HoverPreviewCard({
           : (data as TmdbTvDetails).episode_run_time?.[0] ?? null,
       )
     : null;
+  const seasonsCount =
+    data && item.mediaType === 'tv'
+      ? (data as TmdbTvDetails).number_of_seasons
+      : null;
+  const seasonsLabel =
+    seasonsCount && seasonsCount > 0
+      ? `${seasonsCount} ${
+          seasonsCount === 1 ? t.details.seasonLabel : t.details.seasons
+        }`
+      : null;
 
   return (
     <div
@@ -120,6 +130,7 @@ export function HoverPreviewCard({
           <RatingBadge rating={item.rating} size="xs" />
           {item.year && <span className="text-white/70">{item.year}</span>}
           {runtime && <span className="text-white/70">{runtime}</span>}
+          {seasonsLabel && <span className="text-white/70">{seasonsLabel}</span>}
           <ContentRatingBadge rating={contentRating} />
         </div>
 
