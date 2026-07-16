@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import { queryKeys, queryStaleTime } from '@/config/queryClient';
+import { queryKeys } from '@/config/queryKeys';
+import { queryStaleTime } from '@/config/queryClient';
 import { useI18n } from '@/contexts/i18n/useI18n';
 import { getMovieDetails, getTvDetails } from '@/lib/tmdb/endpoints';
 import {

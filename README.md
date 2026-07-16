@@ -149,17 +149,84 @@ npm run test           # roda a suite de testes
 npm run test:coverage  # roda testes com coverage
 ```
 
-## Estrutura principal
+## Estrutura do projeto
+
+```text
+.
+  docs/                       # documentacao por tema (arquitetura, cache, deploy...)
+  nginx.conf                  # servidor estatico da imagem Docker
+  Dockerfile                  # build multi-stage (Node -> Nginx)
+  src/                        # codigo da aplicacao
+```
+
+### src/
 
 ```text
 src/
-  app/                 # rotas da aplicacao
-  components/          # componentes compartilhados
-  config/              # env e query client
-  contexts/            # tema e i18n
-  features/            # features de catalogo e detalhes
-  hooks/               # hooks compartilhados
-  lib/tmdb/            # cliente, endpoints e imagens da TMDB
-  types/               # tipos TypeScript
-  utils/               # formatadores e helpers
+  app/
+    providers/                # AppProviders: React Query, tema, i18n e
+                              # ciclo de vida da persistencia do cache
+    router/                   # rotas da SPA + preload de chunks de rota
+
+  components/                 # componentes compartilhados entre features
+    feedback/                 # ErrorState, EmptyState, LoadingState,
+                              # ErrorBoundary, NotFoundPage
+    layout/                   # Header e RootLayout
+    media/                    # MediaCard (prefetch por hover/viewport),
+                              # MediaSlider, HoverPreviewCard, badges
+
+  config/                     # configuracao central
+    env.ts                    # variaveis de ambiente tipadas
+    queryClient.ts            # instancia do React Query + TTLs por familia
+    queryKeys.ts              # query keys centralizadas (modulo puro)
+    queryCachePersistence.ts  # persistencia seletiva do cache em localStorage
+                              # (debounce com teto + prune por idade)
+
+  contexts/
+    i18n/                     # provider de idioma + dicionarios pt-BR/en-US
+                              # (inclui a regra de idioma alternativo)
+    theme/                    # modo claro/escuro
+    scroll/                   # restauracao de scroll entre rotas
+
+  features/                   # cada feature agrupa api, paginas e componentes
+    catalog/
+      api/                    # hooks de listas (trending, discover...) e
+                              # aquecimento do idioma alternativo da home
+      components/             # Hero e componentes da home
+      pages/                  # HomePage e CatalogPage (paginacao/filtros)
+    details/
+      api/                    # hooks de creditos, similares e episodios
+                              # por temporada
+      components/             # CastSlider, TrailerModal, SeasonEpisodes
+                              # (seletor de temporada + acordeao de episodios)
+      pages/                  # DetailsPage
+
+  hooks/                      # hooks compartilhados entre features:
+                              # useMediaDetails (initialData via smart cache)
+                              # e mediaDetailsSmartCache (split base/texto)
+
+  lib/tmdb/                   # camada de acesso a TMDB (sem React)
+    client.ts                 # axios + tratamento de erro de dominio
+    httpCache.ts              # dedupe de requests em voo + micro-cache por URL
+    endpoints.ts              # barrel dos endpoints
+    lists.ts                  # listas com base pt-BR + overlay de traducao
+    details.ts                # detalhes com URL canonica por idioma,
+                              # trailer e dados regionais (BR)
+    seasons.ts                # episodios por temporada
+    credits.ts / genres.ts    # creditos e generos
+    regional.ts               # datas/classificacao por regiao
+    normalizers.ts            # shape cru da TMDB -> MediaItem da UI
+    images.ts                 # URLs de poster/backdrop
+    constants.ts / types.ts   # idioma-base, regiao e tipos da camada
+
+  test/                       # setup de testes (Vitest + Testing Library)
+  theme/                      # tema do Material UI
+  types/                      # tipos TypeScript espelhando a TMDB
+  utils/                      # formatadores (datas, duracao)
 ```
+
+Convencao de dependencias: `features/` consome `hooks/`, `components/`,
+`config/` e `lib/`; `lib/tmdb` nao conhece React nem React Query; paginas nao
+conhecem query keys nem idioma (isso fica nos hooks de `api/`). Os testes
+ficam ao lado do arquivo testado (`*.test.ts[x]`).
+

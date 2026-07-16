@@ -254,7 +254,7 @@ export function DetailsPage({ mediaType }: { mediaType: MediaType }) {
         </div>
       </div>
 
-      {/* Episódios por temporada — a lista de seasons já vem no detalhe, sem
+      {/* Episódios por temporada: a lista de seasons já vem no detalhe, sem
           request extra; a key reseta a temporada selecionada ao trocar de série */}
       {!isMovie && ((data as TmdbTvDetails).seasons?.length ?? 0) > 0 && (
         <SeasonEpisodes

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { queryKeys, queryStaleTime } from '@/config/queryClient';
+import { queryKeys } from '@/config/queryKeys';
+import { queryStaleTime } from '@/config/queryClient';
 import { useI18n } from '@/contexts/i18n/useI18n';
 import { getCredits, getSeasonEpisodes, getSimilar } from '@/lib/tmdb/endpoints';
 import { useMediaDetails } from '@/hooks/useMediaDetails';

@@ -134,4 +134,38 @@ describe('SeasonEpisodes', () => {
 
     expect(container).toBeEmptyDOMElement();
   });
+
+  it('renders skeleton rows while episodes are loading', () => {
+    useSeasonEpisodesMock.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      isError: false,
+      error: null,
+      refetch: vi.fn(),
+    });
+
+    const { container } = renderSeasonEpisodes();
+
+    expect(container.getElementsByClassName('MuiSkeleton-root').length).toBe(6);
+    expect(screen.queryByRole('button', { name: /Episode/ })).not.toBeInTheDocument();
+  });
+
+  it('shows the error state and retries the season fetch', async () => {
+    const user = userEvent.setup();
+    const refetch = vi.fn();
+    useSeasonEpisodesMock.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error('Season unavailable'),
+      refetch,
+    });
+
+    renderSeasonEpisodes();
+
+    expect(screen.getByText('Season unavailable')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
 });

@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { queryKeys } from '@/config/queryClient';
+import { queryKeys } from '@/config/queryKeys';
 import type { Language } from '@/contexts/i18n/translations';
 import type {
   Genre,
