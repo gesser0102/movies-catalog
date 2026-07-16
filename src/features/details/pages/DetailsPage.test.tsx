@@ -59,6 +59,14 @@ vi.mock('../components/CastSlider', () => ({
   ),
 }));
 
+vi.mock('../components/CastSliderSkeleton', () => ({
+  CastSliderSkeleton: ({ title }: { title: string }) => (
+    <section aria-busy="true" aria-label={title}>
+      Loading cast
+    </section>
+  ),
+}));
+
 vi.mock('../components/FullCreditsModal', () => ({
   FullCreditsModal: ({
     open,
@@ -274,6 +282,18 @@ describe('DetailsPage', () => {
     expect(screen.getByRole('dialog', { name: '' })).toHaveTextContent(
       'Trailer for The Odyssey',
     );
+  });
+
+  it('renders the cast skeleton while credits are loading', () => {
+    useCreditsMock.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    });
+
+    renderDetailsPage();
+
+    expect(screen.getByLabelText('Top cast')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('Loading cast')).toBeInTheDocument();
   });
 
   it('shows the contextual home button only when the user came from another details page', () => {

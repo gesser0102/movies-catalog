@@ -9,6 +9,7 @@ import OndemandVideoIcon from '@mui/icons-material/OndemandVideo';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import { DetailsPageSkeleton } from '../components/DetailsPageSkeleton';
 import { CastSlider } from '../components/CastSlider';
+import { CastSliderSkeleton } from '../components/CastSliderSkeleton';
 import { SeasonEpisodes } from '../components/SeasonEpisodes';
 import { FullCreditsModal } from '../components/FullCreditsModal';
 import { TrailerModal } from '../components/TrailerModal';
@@ -269,14 +270,16 @@ export function DetailsPage({ mediaType }: { mediaType: MediaType }) {
         />
       )}
 
-      {cast.length > 0 && (
+      {credits.isLoading ? (
+        <CastSliderSkeleton title={t.details.cast} />
+      ) : cast.length > 0 ? (
         <CastSlider
           title={t.details.cast}
           members={cast}
           actionLabel={t.details.viewFullCredits}
           onAction={() => setCreditsOpen(true)}
         />
-      )}
+      ) : null}
 
       {/* Similares — reaproveita o mesmo slider da Home */}
       {similar.data && similar.data.length > 0 && (
