@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Button from '@mui/material/Button';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
@@ -20,7 +20,18 @@ export function CastSlider({
   onAction,
 }: CastSliderProps) {
   const trackRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   const isCompact = members.length <= 4;
+
+  const syncScrollControls = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return;
+
+    const maxScrollLeft = track.scrollWidth - track.clientWidth;
+    setCanScrollLeft(track.scrollLeft > 1);
+    setCanScrollRight(track.scrollLeft < maxScrollLeft - 1);
+  }, []);
 
   const scrollByPage = (direction: 'left' | 'right') => {
     const track = trackRef.current;
@@ -30,6 +41,26 @@ export function CastSlider({
       behavior: 'smooth',
     });
   };
+
+  useEffect(() => {
+    if (isCompact) return;
+
+    const track = trackRef.current;
+    if (!track) return;
+
+    syncScrollControls();
+
+    const handleScroll = () => syncScrollControls();
+    const handleResize = () => syncScrollControls();
+
+    track.addEventListener('scroll', handleScroll, { passive: true });
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      track.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [isCompact, members.length, syncScrollControls]);
 
   if (isCompact) {
     return (
@@ -72,14 +103,16 @@ export function CastSlider({
       </div>
 
       <div className="relative -mt-2 pt-2">
-        <button
-          type="button"
-          onClick={() => scrollByPage('left')}
-          aria-label="Scroll cast left"
-          className="absolute inset-y-0 left-0 z-20 hidden w-14 items-center justify-center bg-gradient-to-r from-black/80 via-black/40 to-transparent text-white opacity-0 transition-opacity duration-200 hover:from-black/90 group-hover/slider:opacity-100 tablet:flex"
-        >
-          <ChevronLeftIcon style={{ fontSize: 40 }} />
-        </button>
+        {canScrollLeft && (
+          <button
+            type="button"
+            onClick={() => scrollByPage('left')}
+            aria-label="Scroll cast left"
+            className="absolute inset-y-0 left-0 z-20 hidden w-14 items-center justify-center bg-gradient-to-r from-black/80 via-black/40 to-transparent text-white opacity-0 transition-opacity duration-200 hover:from-black/90 group-hover/slider:opacity-100 tablet:flex"
+          >
+            <ChevronLeftIcon style={{ fontSize: 40 }} />
+          </button>
+        )}
 
         <div
           ref={trackRef}
@@ -93,14 +126,16 @@ export function CastSlider({
           ))}
         </div>
 
-        <button
-          type="button"
-          onClick={() => scrollByPage('right')}
-          aria-label="Scroll cast right"
-          className="absolute inset-y-0 right-0 z-20 hidden w-14 items-center justify-center bg-gradient-to-l from-black/80 via-black/40 to-transparent text-white opacity-0 transition-opacity duration-200 hover:from-black/90 group-hover/slider:opacity-100 tablet:flex"
-        >
-          <ChevronRightIcon style={{ fontSize: 40 }} />
-        </button>
+        {canScrollRight && (
+          <button
+            type="button"
+            onClick={() => scrollByPage('right')}
+            aria-label="Scroll cast right"
+            className="absolute inset-y-0 right-0 z-20 hidden w-14 items-center justify-center bg-gradient-to-l from-black/80 via-black/40 to-transparent text-white opacity-0 transition-opacity duration-200 hover:from-black/90 group-hover/slider:opacity-100 tablet:flex"
+          >
+            <ChevronRightIcon style={{ fontSize: 40 }} />
+          </button>
+        )}
       </div>
     </section>
   );
