@@ -59,6 +59,17 @@ const episodes: TmdbEpisode[] = [
     runtime: 45,
     vote_average: 7,
   },
+  {
+    id: 3,
+    episode_number: 3,
+    season_number: 1,
+    name: 'Episode 3',
+    overview: 'Third episode overview.',
+    still_path: null,
+    air_date: '2026-01-15',
+    runtime: 45,
+    vote_average: 7,
+  },
 ];
 
 function renderSeasonEpisodes(tvId = 7, list = seasons) {
@@ -106,6 +117,13 @@ describe('SeasonEpisodes', () => {
     expect(
       screen.queryByRole('button', { name: /Episode 2 — Silent/ }),
     ).not.toBeInTheDocument();
+  });
+
+  it('does not repeat the prefix when the episode title is already generic', () => {
+    renderSeasonEpisodes();
+
+    expect(screen.getByRole('button', { name: /^Episode 3$/ })).toBeInTheDocument();
+    expect(screen.queryByText('Episode 3 — Episode 3')).not.toBeInTheDocument();
   });
 
   it('hides specials, selects the first real season and warms the alternate language', () => {

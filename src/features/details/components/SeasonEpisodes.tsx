@@ -23,6 +23,21 @@ interface SeasonEpisodesProps {
   seasons: TmdbSeasonSummary[];
 }
 
+function formatEpisodeLabel(
+  episodeLabel: string,
+  episodeNumber: number,
+  episodeName: string,
+) {
+  const prefix = `${episodeLabel} ${episodeNumber}`;
+  const name = episodeName.trim();
+
+  if (!name) return prefix;
+
+  return name.toLocaleLowerCase() === prefix.toLocaleLowerCase()
+    ? prefix
+    : `${prefix} — ${name}`;
+}
+
 /**
  * Lista de episódios em estilo FAQ: seletor de temporada + acordeão.
  * O cabeçalho de cada item é "Episódio N — Título"; expandir mostra a
@@ -89,7 +104,11 @@ export function SeasonEpisodes({ tvId, seasons }: SeasonEpisodesProps) {
       {episodes.data && (
         <div className="flex flex-col gap-1">
           {episodes.data.map((episode) => {
-            const label = `${t.details.episode} ${episode.episode_number} — ${episode.name}`;
+            const label = formatEpisodeLabel(
+              t.details.episode,
+              episode.episode_number,
+              episode.name,
+            );
             const hasOverview = episode.overview.trim().length > 0;
 
             if (!hasOverview) {
