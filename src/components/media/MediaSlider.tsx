@@ -3,7 +3,7 @@ import {
   useEffect,
   useRef,
   useState,
-  type MouseEvent,
+  type MouseEvent as ReactMouseEvent,
   type ReactNode,
 } from 'react';
 import { Link } from 'react-router-dom';
@@ -32,7 +32,7 @@ const VISUAL_SCROLL_IDLE_MS = 80;
 const STABLE_PROGRESS_REPETITIONS_TO_RESTORE = 10;
 const PROGRESS_PRECISION = 3;
 
-function allowTouchDrag(_emblaApi: EmblaCarouselType, event: MouseEvent | TouchEvent) {
+function allowTouchDrag(_emblaApi: EmblaCarouselType, event: Event) {
   const isTouchEvent = event.type.startsWith('touch');
   const isCoarsePointer =
     typeof window !== 'undefined' &&
@@ -77,7 +77,7 @@ export function MediaSlider({
     [emblaRef],
   );
 
-  const rememberPointerPosition = (event: MouseEvent<HTMLDivElement>) => {
+  const rememberPointerPosition = (event: ReactMouseEvent<HTMLDivElement>) => {
     pointerPosition.current = {
       x: event.clientX,
       y: event.clientY,
