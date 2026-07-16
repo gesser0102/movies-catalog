@@ -171,39 +171,44 @@ export function DetailsPage({ mediaType }: { mediaType: MediaType }) {
                 <p className="mt-1 text-base italic opacity-70">{data.tagline}</p>
               )}
 
-              {/* Metadados: nota, data, duração */}
-              <div className="mt-4 flex flex-wrap items-center gap-4 text-sm">
-                <div className="inline-flex items-center gap-2">
-                  <RatingBadge rating={data.vote_average} size="md" />
-                  <span className="max-w-[92px] text-sm font-bold leading-tight">
-                    {t.details.userRating}
-                  </span>
-                </div>
-                {data.content_rating && (
-                  <span className="inline-flex items-center gap-2">
-                    <ContentRatingBadge rating={data.content_rating} size="md" />
-                    <span className="max-w-[116px] text-sm font-bold leading-tight">
-                      {t.details.ageRating}
+              {/* Metadados: nota/classificação na primeira linha; data/duração na segunda. */}
+              <div className="mt-4 flex flex-col gap-3 text-sm">
+                <div className="flex flex-wrap items-center gap-4">
+                  <div className="inline-flex items-center gap-2">
+                    <RatingBadge rating={data.vote_average} size="md" />
+                    <span className="max-w-[92px] text-sm font-bold leading-tight">
+                      {t.details.userRating}
                     </span>
-                  </span>
-                )}
-                {releaseDate && (
-                  <span className="inline-flex items-center gap-1 opacity-80">
-                    <CalendarMonthIcon style={{ fontSize: 16 }} />
-                    {releaseDate}
-                  </span>
-                )}
-                {runtime && (
-                  <span className="inline-flex items-center gap-1 opacity-80">
-                    <ScheduleIcon style={{ fontSize: 16 }} />
-                    {runtime}
-                  </span>
-                )}
-                {!isMovie && (
-                  <span className="opacity-80">
-                    {(data as TmdbTvDetails).number_of_seasons} {t.details.seasons}
-                  </span>
-                )}
+                  </div>
+                  {data.content_rating && (
+                    <span className="inline-flex items-center gap-2">
+                      <ContentRatingBadge rating={data.content_rating} size="md" />
+                      <span className="max-w-[116px] text-sm font-bold leading-tight">
+                        {t.details.ageRating}
+                      </span>
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                  {releaseDate && (
+                    <span className="inline-flex items-center gap-1 opacity-80">
+                      <CalendarMonthIcon style={{ fontSize: 16 }} />
+                      {releaseDate}
+                    </span>
+                  )}
+                  {runtime && (
+                    <span className="inline-flex items-center gap-1 opacity-80">
+                      <ScheduleIcon style={{ fontSize: 16 }} />
+                      {runtime}
+                    </span>
+                  )}
+                  {!isMovie && (
+                    <span className="opacity-80">
+                      {(data as TmdbTvDetails).number_of_seasons} {t.details.seasons}
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Gêneros como chips */}
