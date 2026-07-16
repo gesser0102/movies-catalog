@@ -22,13 +22,12 @@ export class TmdbApiError extends Error {
 }
 
 /**
- * Criacao da base url das requestes com bearer
- * passado no header da request
+ * Client TMDB sem bearrer pois que injeta e o proxy.
+ * de modo que evite a exposicao de token nas requests
  */
 export const tmdbClient = axios.create({
   baseURL: env.tmdb.apiBaseUrl,
   headers: {
-    Authorization: `Bearer ${env.tmdb.accessToken}`,
     Accept: 'application/json',
   },
   timeout: 12_000,

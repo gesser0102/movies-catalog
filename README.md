@@ -60,13 +60,19 @@ Copy-Item .env.example .env.local
 Preencha:
 
 ```env
-VITE_TMDB_ACCESS_TOKEN="seu_read_access_token_da_tmdb"
-VITE_TMDB_API_BASE_URL="https://api.themoviedb.org/3"
+TMDB_ACCESS_TOKEN="seu_read_access_token_da_tmdb"
+VITE_TMDB_API_BASE_URL="/api/tmdb"
 VITE_TMDB_IMAGE_BASE_URL="https://image.tmdb.org/t/p"
 ```
 
-Observacao: como este projeto usa Vite, variaveis `VITE_*` sao aplicadas em
-tempo de build. Se trocar alguma delas em producao, gere um novo build.
+Observacoes:
+
+- `TMDB_ACCESS_TOKEN` nao tem o prefixo `VITE_` de proposito: o token nunca
+  entra no bundle do navegador. Quem o injeta e o proxy sera o dev server do
+  Vite em desenvolvimento e o nginx em producao (`location /api/tmdb/`).
+- Variaveis `VITE_*` sao aplicadas em tempo de build. Se trocar alguma delas
+  em producao, gere um novo build. O token, por ser de runtime, pode ser
+  trocado apenas reiniciando o container.
 
 ## Rodando em desenvolvimento
 
@@ -76,7 +82,7 @@ Suba o servidor local:
 npm run dev
 ```
 
-Por padrao, o Vite abre em:
+Acesse o servidor local em:
 
 ```text
 http://localhost:5173
@@ -101,35 +107,31 @@ npm run preview
 O Dockerfile usa build multi-stage:
 
 - Node faz o build do Vite;
-- Nginx serve os arquivos estaticos de `dist`;
+- Nginx serve os arquivos estaticos de `dist` e faz proxy da TMDB
+  (`/api/tmdb/`), injetando o token no servidor e cacheando respostas na
+  borda por 5 minutos;
 - a aplicacao fica exposta na porta `80` dentro do container.
 
-Monte a imagem passando o token da TMDB como build arg:
+Monte a imagem (sem token — ele nao participa do build):
 
 ```bash
-docker build \
-  -t movies-catalog:local \
-  --build-arg VITE_TMDB_ACCESS_TOKEN="seu_read_access_token_da_tmdb" \
-  --build-arg VITE_TMDB_API_BASE_URL="https://api.themoviedb.org/3" \
-  --build-arg VITE_TMDB_IMAGE_BASE_URL="https://image.tmdb.org/t/p" \
-  .
+docker build -t movies-catalog:local .
+```
+
+Rode o container passando o token como variavel de runtime:
+
+```bash
+docker run --rm -p 8080:80 \
+  -e TMDB_ACCESS_TOKEN="seu_read_access_token_da_tmdb" \
+  movies-catalog:local
 ```
 
 No PowerShell:
 
 ```powershell
-docker build `
-  -t movies-catalog:local `
-  --build-arg VITE_TMDB_ACCESS_TOKEN="seu_read_access_token_da_tmdb" `
-  --build-arg VITE_TMDB_API_BASE_URL="https://api.themoviedb.org/3" `
-  --build-arg VITE_TMDB_IMAGE_BASE_URL="https://image.tmdb.org/t/p" `
-  .
-```
-
-Rode o container:
-
-```bash
-docker run --rm -p 8080:80 movies-catalog:local
+docker run --rm -p 8080:80 `
+  -e TMDB_ACCESS_TOKEN="seu_read_access_token_da_tmdb" `
+  movies-catalog:local
 ```
 
 Depois acesse:

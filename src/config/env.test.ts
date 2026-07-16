@@ -1,8 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('env', () => {
-  const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
   beforeEach(() => {
     vi.resetModules();
   });
@@ -12,30 +10,32 @@ describe('env', () => {
   });
 
   it('reads TMDB configuration from Vite env variables', async () => {
-    vi.stubEnv('VITE_TMDB_ACCESS_TOKEN', 'token');
     vi.stubEnv('VITE_TMDB_API_BASE_URL', 'https://api.example.test');
     vi.stubEnv('VITE_TMDB_IMAGE_BASE_URL', 'https://image.example.test');
 
     const { env } = await import('./env');
 
     expect(env.tmdb).toEqual({
-      accessToken: 'token',
       apiBaseUrl: 'https://api.example.test',
       imageBaseUrl: 'https://image.example.test',
     });
-    expect(warnSpy).not.toHaveBeenCalled();
   });
 
-  it('warns for missing required values and falls back when optional values are absent', async () => {
-    vi.stubEnv('VITE_TMDB_ACCESS_TOKEN', '');
+  it('falls back to the proxy path and default image CDN when values are absent', async () => {
     vi.stubEnv('VITE_TMDB_API_BASE_URL', undefined);
     vi.stubEnv('VITE_TMDB_IMAGE_BASE_URL', undefined);
 
     const { env } = await import('./env');
 
-    expect(env.tmdb.accessToken).toBe('');
-    expect(env.tmdb.apiBaseUrl).toBe('https://api.themoviedb.org/3');
+    // O caminho relativo é o contrato com o proxy (Vite em dev, nginx em prod).
+    expect(env.tmdb.apiBaseUrl).toBe('/api/tmdb');
     expect(env.tmdb.imageBaseUrl).toBe('https://image.tmdb.org/t/p');
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('VITE_TMDB_ACCESS_TOKEN'));
+  });
+
+  it('does not expose the TMDB access token to client code', async () => {
+    const { env } = await import('./env');
+
+    expect(JSON.stringify(env)).not.toContain('accessToken');
+    expect(import.meta.env.VITE_TMDB_ACCESS_TOKEN).toBeUndefined();
   });
 });
