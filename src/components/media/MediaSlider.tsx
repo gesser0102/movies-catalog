@@ -56,10 +56,12 @@ export function MediaSlider({
     align: 'start',
     containScroll: 'trimSnaps',
     duration: 32,
+    dragFree: true,
     slidesToScroll: 1,
     watchDrag: allowTouchDrag,
     breakpoints: {
       '(min-width: 768px)': {
+        dragFree: false,
         slidesToScroll: 4,
       },
     },

@@ -64,13 +64,15 @@ describe('CastSlider', () => {
     expect(screen.queryByLabelText('Scroll cast right')).not.toBeInTheDocument();
   });
 
-  it('uses Embla for larger cast lists with mobile and desktop step settings', () => {
+  it('uses Embla for larger cast lists with mobile free drag and desktop grouped snaps', () => {
     renderCastSlider(8);
 
     const options = emblaHookMock.useEmblaCarousel.mock.calls[0][0];
 
     expect(options.active).toBe(true);
+    expect(options.dragFree).toBe(true);
     expect(options.slidesToScroll).toBe(1);
+    expect(options.breakpoints['(min-width: 768px)'].dragFree).toBe(false);
     expect(options.breakpoints['(min-width: 768px)'].slidesToScroll).toBe(4);
     expect(screen.getByText('Actor 8')).toBeInTheDocument();
   });

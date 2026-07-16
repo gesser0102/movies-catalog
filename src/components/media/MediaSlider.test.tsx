@@ -129,12 +129,14 @@ describe('MediaSlider', () => {
     expect(options.watchDrag(emblaApiMock, new Event('touchstart'))).toBe(true);
   });
 
-  it('uses one slide per swipe on mobile and four slides on wider screens', () => {
+  it('uses free dragging on mobile and grouped snaps on wider screens', () => {
     renderSlider(<MediaSlider title="Acao" items={items} />);
 
     const options = emblaHookMock.useEmblaCarousel.mock.calls[0][0];
 
+    expect(options.dragFree).toBe(true);
     expect(options.slidesToScroll).toBe(1);
+    expect(options.breakpoints['(min-width: 768px)'].dragFree).toBe(false);
     expect(options.breakpoints['(min-width: 768px)'].slidesToScroll).toBe(4);
   });
 
